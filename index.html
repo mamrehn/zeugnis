@@ -234,32 +234,44 @@
         const traitDescriptions = {
             "Mitarbeit": {
                 "-1.0": "Passiv zurückhaltend",
+                "-0.5": "Eher zurückhaltend",
                 "0.0": "Neutral",
+                "0.5": "Eher engagiert",
                 "1.0": "Hervorragend engagiert"
             },
             "Sozialverhalten": {
                 "-1.0": "Problematisch störend",
+                "-0.5": "Eher störend",
                 "0.0": "Neutral",
+                "0.5": "Eher sozial",
                 "1.0": "Vorbildlich sozial"
             },
             "Aktivitaetsniveau": {
                 "-1.0": "Unruhig störend",
+                "-0.5": "Eher unruhig",
                 "0.0": "Neutral",
-                "1.0": "Ruhig besonnen"
+                "0.5": "Eher besonnen",
+                "1.0": "Sehr besonnen"
             },
             "Lernhaltung": {
                 "-1.0": "Nachlässig gleichgültig",
+                "-0.5": "Eher gleichgültig",
                 "0.0": "Neutral",
+                "0.5": "Eher fleißig",
                 "1.0": "Fleißig zielstrebig"
             },
             "Aufmerksamkeit": {
                 "-1.0": "Desinteressiert abgelenkt",
+                "-0.5": "Eher ablenkbar",
                 "0.0": "Neutral",
+                "0.5": "Eher interessiert",
                 "1.0": "Interessiert fokussiert"
             },
             "Selbststaendigkeit": {
                 "-1.0": "Unselbstständig abhängig",
+                "-0.5": "Eher unselbstständig",
                 "0.0": "Neutral",
+                "0.5": "Eher eigenverantwortlich",
                 "1.0": "Eigenverantwortlich selbstständig"
             }
         };
@@ -1336,13 +1348,20 @@
 
                     // Update description
                     if (traitDescriptions[trait]) {
-                        if (currentValue < 0) {
-                            descriptionDisplay.textContent = traitDescriptions[trait]["-1.0"];
-                        } else if (currentValue > 0) {
-                            descriptionDisplay.textContent = traitDescriptions[trait]["1.0"];
-                        } else {
-                            descriptionDisplay.textContent = traitDescriptions[trait]["0.0"];
-                        }
+                      if (currentValue == 0) {
+                          descriptionDisplay.textContent = traitDescriptions[trait]["0.0"];
+                      } else {
+                          // Only show exactly 0.0 as "Neutral"
+                          let idx = (Math.round(currentValue * 2) / 2).toFixed(1);
+                          if (idx == 0) {
+                              idx = 0.5;
+                              if (currentValue < 0) {
+                                idx *= -1;
+                              }
+                          }
+                          // Update label according to description
+                          descriptionDisplay.textContent = traitDescriptions[trait][idx.toString()];
+                      }
                     }
                 };
                 // Initial color and description update
