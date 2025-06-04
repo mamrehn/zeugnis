@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Schülerbeurteilungs-App</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- UMAP-JS for dimensionality reduction -->
+    <script src="https://cdn.jsdelivr.net/npm/umap-js@1.4.0/lib/umap-js.min.js" integrity="sha256-nSJtslzFfq4eGEN2XqxkyQ9rzP3rLCviUgsuMQq8Pe0=" crossorigin="anonymous"></script>
+    <!-- math.js for matrix operations (covariance, inverse) for Mahalanobis distance -->
+    <script src="https://cdn.jsdelivr.net/npm/mathjs@14.5.2/lib/browser/math.min.js"></script>
     <style>
         body {
             font-family: "Inter", sans-serif;
@@ -177,9 +181,38 @@
         .category-color-4 { background-color: #0f766e; color: black; filter: brightness(190%); } /* Teal */
         .category-color-5 { background-color: #b5db2b; color: black; filter: brightness(190%); } /* Yellow */
 
+        /* Message Box Styles */
+        .message-box {
+            display: none; /* Hidden by default */
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #4CAF50; /* Green */
+            color: white;
+            padding: 15px 20px;
+            border-radius: 5px;
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            z-index: 1001;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+        }
+        .message-box.show {
+            display: block;
+            opacity: 1;
+        }
+        .message-box.error {
+            background-color: #f44336; /* Red */
+        }
+        .message-box.info {
+            background-color: #2196F3; /* Blue */
+        }
     </style>
 </head>
 <body class="p-6">
+    <div id="messageBox" class="message-box"></div>
+
     <div class="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-lg">
         <h1 class="text-3xl font-bold text-center text-gray-800 mb-8">Zeugnisbeurteilungen (Alpha)</h1>
 
@@ -229,6 +262,13 @@
         let studentAssessmentData; // Global variable to hold the JSON data
         const LOCAL_STORAGE_KEY = 'studentAssessments';
         const MIN_SUGGESTIONS_PER_CATEGORY = 3; // Minimum suggestions to pick from each category
+        const K_NEIGHBORS = 12; // Number of nearest neighbors for Mahalanobis distance
+
+        let umap; // Global UMAP instance
+        let umapReducedCommentVectors = []; // Stores 2D UMAP-reduced vectors for comments
+        let originalCommentData = []; // Stores original comment objects along with their 6D vectors
+        let inverseCovarianceMatrix = null; // Stores the inverse covariance matrix for Mahalanobis distance
+        let sortedTraitNames = []; // To maintain a consistent order for 6D vectors
 
         // Trait descriptions mapping
         const traitDescriptions = {
@@ -276,7 +316,96 @@
             }
         };
 
-        // Function to load JSON data
+        /**
+         * Displays a message in a floating box.
+         * @param {string} message - The message to display.
+         * @param {string} type - 'success', 'error', or 'info'.
+         */
+        function displayMessage(message, type = 'success') {
+            const messageBox = document.getElementById('messageBox');
+            messageBox.textContent = message;
+            messageBox.className = `message-box show ${type}`;
+            if (message) {
+                setTimeout(() => {
+                    messageBox.classList.remove('show');
+                }, 3000); // Hide after 3 seconds
+            }
+        }
+
+        /**
+         * Converts a comment's weights object into a 6D vector based on a consistent trait order.
+         * Missing traits are filled with 0.0 (neutral).
+         * @param {Object} weights - The weights object from a comment.
+         * @returns {number[]} A 6D vector.
+         */
+        function convertWeightsToVector(weights) {
+            const vector = [];
+            sortedTraitNames.forEach(trait => {
+                // Use 0.0 for null or undefined weights, ensuring a consistent 6D vector
+                vector.push(weights[trait] !== null && weights[trait] !== undefined ? weights[trait] : 0.0);
+            });
+            return vector;
+        }
+
+        /**
+         * Calculates the Mahalanobis distance between two vectors given the inverse covariance matrix.
+         * D_M(x, y) = sqrt((x - y)^T * S^-1 * (x - y))
+         * @param {number[]} vec1 - The first vector (2D).
+         * @param {number[]} vec2 - The second vector (2D).
+         * @param {math.Matrix} invCov - The inverse covariance matrix.
+         * @returns {number} The Mahalanobis distance.
+         */
+        function calculateMahalanobisDistance(vec1, vec2, invCov) {
+            try {
+                const diff = math.subtract(vec1, vec2);
+                const diffT = math.transpose(diff); // Transpose of the difference vector
+                const term1 = math.multiply(diffT, invCov);
+                const term2 = math.multiply(term1, diff);
+                return Math.sqrt(term2);
+            } catch (error) {
+                console.error("Error calculating Mahalanobis distance:", error);
+                displayMessage("Fehler bei der Mahalanobis-Distanzberechnung.", "error");
+                return Infinity; // Return a very large distance on error
+            }
+        }
+
+        /**
+         * Calculates the covariance matrix for a set of 2D vectors.
+         * @param {number[][]} data - An array of 2D vectors.
+         * @returns {math.Matrix} The covariance matrix.
+         */
+        function calculateCovarianceMatrix(data) {
+            if (data.length < 2) {
+                console.warn("Not enough data points to calculate covariance matrix. Need at least 2.");
+                return null;
+            }
+
+            const n = data.length;
+            const mean = [
+                data.reduce((sum, vec) => sum + vec[0], 0) / n,
+                data.reduce((sum, vec) => sum + vec[1], 0) / n
+            ];
+
+            let covXX = 0;
+            let covXY = 0;
+            let covYY = 0;
+
+            for (let i = 0; i < n; i++) {
+                const diffX = data[i][0] - mean[0];
+                const diffY = data[i][1] - mean[1];
+                covXX += diffX * diffX;
+                covXY += diffX * diffY;
+                covYY += diffY * diffY;
+            }
+
+            // Using n-1 for sample covariance
+            return math.matrix([
+                [covXX / (n - 1), covXY / (n - 1)],
+                [covXY / (n - 1), covYY / (n - 1)]
+            ]);
+        }
+
+        // Function to load JSON data and initialize UMAP
         async function loadJsonData() {
             studentAssessmentData = {
   "Mitarbeit": {
@@ -1264,7 +1393,93 @@
   }
 };
             console.log('Daten erfolgreich geladen:', studentAssessmentData);
+
+            // Initialize trait inputs (sliders) and collect all possible trait names
             initializeTraitInputs();
+
+            // Prepare data for UMAP
+            const allCommentVectors = [];
+            originalCommentData = []; // Clear previous data
+
+            // Ensure sortedTraitNames is populated before processing comments
+            const allPossibleTraits = new Set();
+            for (const categoryKey in studentAssessmentData) {
+                const category = studentAssessmentData[categoryKey];
+                for (const gradeKey in category) {
+                    if (gradeKey !== 'datum') {
+                        const grade = category[gradeKey];
+                        grade.comments.forEach(comment => {
+                            for (const trait in comment.weights) {
+                                allPossibleTraits.add(trait);
+                            }
+                        });
+                    }
+                }
+            }
+            sortedTraitNames = Array.from(allPossibleTraits).sort();
+            console.log('Sorted Trait Names for Vectorization:', sortedTraitNames);
+
+            for (const categoryKey in studentAssessmentData) {
+                const category = studentAssessmentData[categoryKey];
+                for (const gradeKey in category) {
+                    if (gradeKey !== 'datum') {
+                        const grade = category[gradeKey];
+                        grade.comments.forEach(comment => {
+                            const vector6D = convertWeightsToVector(comment.weights);
+                            allCommentVectors.push(vector6D);
+                            originalCommentData.push({
+                                category: categoryKey,
+                                grade: gradeKey,
+                                comment: comment,
+                                vector6D: vector6D // Store the original 6D vector
+                            });
+                        });
+                    }
+                }
+            }
+
+            if (allCommentVectors.length === 0) {
+                displayMessage("Keine Kommentare zum Trainieren des UMAP-Modells gefunden.", "error");
+                return;
+            }
+
+            // Initialize and train UMAP
+            umap = new UMAP.UMAP({
+                nComponents: 2, // Reduce to 2 dimensions
+                nNeighbors: Math.min(15, allCommentVectors.length - 1), // Max neighbors is data.length - 1
+                minDist: 0.1,
+                spread: 1.0,
+                // metric: 'euclidean' // UMAP uses Euclidean distance internally
+            });
+
+            try {
+                // Train UMAP model
+                umapReducedCommentVectors = await umap.fit(allCommentVectors);
+                console.log('UMAP-Modell erfolgreich trainiert. Reduzierte Vektoren (2D):', umapReducedCommentVectors);
+
+                // Calculate Covariance Matrix and its inverse for Mahalanobis Distance
+                const covMatrix = calculateCovarianceMatrix(umapReducedCommentVectors);
+                if (covMatrix) {
+                    try {
+                        inverseCovarianceMatrix = math.inv(covMatrix);
+                        console.log('Inverse Kovarianzmatrix:', inverseCovarianceMatrix);
+                    } catch (e) {
+                        console.error("Could not compute inverse of covariance matrix. It might be singular.", e);
+                        displayMessage("Fehler: Kovarianzmatrix ist singulär. Mahalanobis-Distanz nicht verfügbar.", "error");
+                        inverseCovarianceMatrix = null;
+                    }
+                } else {
+                    displayMessage("Fehler: Kovarianzmatrix konnte nicht berechnet werden. Nicht genügend Daten oder Varianz.", "error");
+                    inverseCovarianceMatrix = null;
+                }
+
+            } catch (error) {
+                console.error("Fehler beim Trainieren des UMAP-Modells:", error);
+                displayMessage("Fehler beim Trainieren des UMAP-Modells.", "error");
+                umap = null; // Reset UMAP if training fails
+                umapReducedCommentVectors = [];
+                inverseCovarianceMatrix = null;
+            }
         }
 
         // Function to initialize trait inputs (sliders)
@@ -1292,14 +1507,14 @@
             console.log('Anzahl der gefundenen Eigenschaften:', allPossibleTraits.size);
             console.log('Gefundene Eigenschaften:', Array.from(allPossibleTraits));
 
-            const sortedTraits = Array.from(allPossibleTraits).sort();
+            sortedTraitNames = Array.from(allPossibleTraits).sort(); // Populate global sortedTraitNames
 
-            if (sortedTraits.length === 0) {
+            if (sortedTraitNames.length === 0) {
                 traitsContainer.innerHTML = '<p class="text-gray-600 text-center">Keine Charaktereigenschaften in den Daten gefunden.</p>';
                 return;
             }
 
-            sortedTraits.forEach(trait => {
+            sortedTraitNames.forEach(trait => {
                 const traitId = trait.replace(/[^a-zA-Z0-9]/g, '_'); // Sanitize trait name for ID
 
                 const div = document.createElement('div');
@@ -1348,29 +1563,27 @@
 
                     // Update description
                     if (traitDescriptions[trait]) {
-                      if (currentValue == 0) {
-                          descriptionDisplay.textContent = traitDescriptions[trait]["0.0"];
-                      } else {
-                          // Only show exactly 0.0 as "Neutral"
-                          let idx = (Math.round(currentValue * 2) / 2).toFixed(1);
-                          if (idx == 0) {
-                              idx = 0.5;
-                              if (currentValue < 0) {
-                                idx *= -1;
-                              }
-                          }
-                          // Update label according to description
-                          descriptionDisplay.textContent = traitDescriptions[trait][idx.toString()];
-                      }
+                        if (currentValue == 0) {
+                            descriptionDisplay.textContent = traitDescriptions[trait]["0.0"];
+                        } else {
+                            // Only show exactly 0.0 as "Neutral"
+                            let idx = (Math.round(currentValue * 2) / 2).toFixed(1);
+                            if (idx == 0) {
+                                idx = 0.5; // For -0.1 to -0.7, use -0.5; for 0.1 to 0.7, use 0.5
+                                if (currentValue < 0) {
+                                    idx *= -1;
+                                }
+                            }
+                            // Update label according to description
+                            descriptionDisplay.textContent = traitDescriptions[trait][idx.toString()];
+                        }
                     }
                 };
                 // Initial color and description update
                 slider.oninput();
 
-
                 sliderDiv.appendChild(slider);
                 sliderDiv.appendChild(valueDisplay);
-
                 div.appendChild(label);
                 div.appendChild(sliderDiv);
                 div.appendChild(descriptionDisplay); // Append description below slider
@@ -1413,7 +1626,7 @@
             const userTraits = {};
             const traitsContainer = document.getElementById('traitsContainer');
             const allSliderInputs = traitsContainer.querySelectorAll('input[type="range"]');
-
+            
             allSliderInputs.forEach(input => {
                 // input.id is already the sanitized trait name (e.g., "Freundlich_Hilfsbereit")
                 const traitName = input.id;
@@ -1422,145 +1635,67 @@
             return userTraits;
         }
 
-        // Function to calculate similarity between user input and comment weights
-        function calculateSimilarity(userTraits, commentWeights) {
-            const root = 4;
-            let sumOfSqrtDifferences = 0;
-            let count = 0; // Number of common traits with valid weights
-            let countUserTraitsConsidered = 0; // Total traits from user input iterated
-
-            for (const trait in userTraits) {
-                countUserTraitsConsidered++;
-                // Only consider traits that are present in comment weights and have a non-null weight
-                if (commentWeights.hasOwnProperty(trait) && commentWeights[trait] !== null) {
-                    const userValue = userTraits[trait]; // Already a number
-                    const commentValue = commentWeights[trait];
-
-                    const diff = Math.abs(userValue - commentValue);
-                    sumOfSqrtDifferences += Math.pow(diff, 1/root);  // Math.sqrt(diff);
-                    count++;
-                }
-            }
-
-            if (count === 0) {
-                return 0; // No common, validly weighted traits
-            }
-
-            const averageSqrtDiff = sumOfSqrtDifferences / count;
-            const maxSingleTraitSqrtDiff = Math.pow(2, 1/root);  // Math.sqrt(2); // Max possible sqrt(abs(diff)) for one trait range -1 to 1 maps to diff 0 to 2
-
-            // Factor to consider how many of the comment's available traits were matched by the user's significant inputs
-            // This interpretation of matchingAttributesFactor is slightly different now:
-            // It emphasizes how many of the *comment's specified traits* were actually relevant to the user's non-neutral settings,
-            // or simply how many traits are shared.
-            // A simpler approach: "How many of the traits the user has *actually set* (non-zero) are matched in the comment?"
-            // For now, let's use a factor based on the proportion of common traits to all traits the user *could* set.
-            // This means if a comment only defines a few traits, and the user set many, it might be less relevant.
-            /*let relevantUserTraits = 0;
-            for(const trait in userTraits){
-                if(userTraits[trait] !== 0.0) relevantUserTraits++; //Count traits user actively set away from neutral
-            }*/
-
-
-            // A high number of traits in `userTraits` that are *not* in `commentWeights` (or are null there)
-            // means the comment is less specific to the user's detailed input.
-            // count = common traits between user and comment (where comment weight is not null)
-            // countUserTraitsConsidered = all traits available in UI (sliders)
-
-            // Penalize if the comment doesn't have weights for many of the UI traits
-            const matchingAttributesFactor = Math.sqrt(count / countUserTraitsConsidered);
-
-
-            // Invert the normalized average difference to get a similarity score (higher is better)
-            let similarity = (maxSingleTraitSqrtDiff - averageSqrtDiff) / maxSingleTraitSqrtDiff;
-            similarity = Math.max(0, similarity); // Ensure similarity is not negative
-
-            return similarity * matchingAttributesFactor;
-        }
-
-        // Function to generate suggestions
-        function generateSuggestions() {
-            if (!studentAssessmentData) {
-                console.error('Daten sind noch nicht geladen.');
-                displayMessage('Daten sind noch nicht geladen. Bitte warten Sie einen Moment oder laden Sie die Seite neu.', 'error');
+        /**
+         * Generates suggestions based on UMAP dimensionality reduction and Mahalanobis distance.
+         */
+        async function generateSuggestions() {
+            if (!umap || umapReducedCommentVectors.length === 0 || !inverseCovarianceMatrix) {
+                displayMessage("Modell ist nicht bereit. Bitte warten Sie, bis die Daten geladen und UMAP trainiert sind.", "error");
                 return;
             }
 
             const lastName = document.getElementById('lastName').value.trim();
             const isMale = document.getElementById('genderMale').classList.contains('active');
-            const userTraits = getUserTraitInputs();
 
             if (!lastName) {
-                displayMessage('Bitte geben Sie den Nachnamen des Schülers/der Schülerin ein.', 'error');
+                displayMessage("Bitte geben Sie den Nachnamen der Schülerin / des Schülers ein.", "error");
                 return;
             }
 
-            displayMessage(''); // Clear previous messages
+            const userTraitInputs = getUserTraitInputs();
+            const userVector6D = convertWeightsToVector(userTraitInputs);
 
-            const categorizedComments = {};
-            for (const categoryKey in studentAssessmentData) {
-                if (categoryKey !== 'datum') { // Skip 'datum' field
-                    categorizedComments[categoryKey] = [];
-                    const category = studentAssessmentData[categoryKey];
-                    for (const gradeKey in category) {
-                        if (gradeKey !== 'datum') {
-                            const grade = category[gradeKey];
-                            grade.comments.forEach(comment => {
-                                categorizedComments[categoryKey].push({
-                                    comment: comment,
-                                    category: categoryKey // Store the category
-                                });
-                            });
-                        }
-                    }
+            let userVector2D;
+            try {
+                // Transform the single user input vector using the trained UMAP model
+                userVector2D = umap.transform([userVector6D])[0];
+                console.log('User Input 6D:', userVector6D);
+                console.log('User Input 2D (UMAP-reduced):', userVector2D);
+            } catch (error) {
+                console.error("Error transforming user input with UMAP:", error);
+                displayMessage("Fehler bei der UMAP-Transformation der Benutzereingabe.", "error");
+                return;
+            }
+
+            // Calculate Mahalanobis distance for all comments
+            const commentsWithDistance = originalCommentData.map((data, index) => {
+                const commentVector2D = umapReducedCommentVectors[index];
+                const distance = calculateMahalanobisDistance(userVector2D, commentVector2D, inverseCovarianceMatrix);
+                return {
+                    ...data,
+                    distance: distance
+                };
+            });
+
+            // Sort comments by Mahalanobis distance (ascending)
+            commentsWithDistance.sort((a, b) => a.distance - b.distance);
+
+            // Select the top K_NEIGHBORS comments
+            const topSuggestions = commentsWithDistance.slice(0, K_NEIGHBORS);
+
+            // Group suggestions by category
+            const groupedSuggestions = {};
+            topSuggestions.forEach(item => {
+                if (!groupedSuggestions[item.category]) {
+                    groupedSuggestions[item.category] = [];
                 }
-            }
+                groupedSuggestions[item.category].push(item);
+            });
 
-            let combinedTopSuggestions = [];
-
-            for (const categoryKey in categorizedComments) {
-                const commentsInCategory = categorizedComments[categoryKey];
-                const scoredCommentsInCategory = commentsInCategory.map(item => {
-                    const similarity = calculateSimilarity(userTraits, item.comment.weights);
-                    return {
-                        comment: item.comment,
-                        similarity: similarity,
-                        userTraitsSnapshot: { ...userTraits }, // Keep a snapshot for display
-                        category: item.category // Pass category along
-                    };
-                });
-
-                scoredCommentsInCategory.sort((a, b) => b.similarity - a.similarity);
-
-                // Take at least MIN_SUGGESTIONS_PER_CATEGORY from each category
-                const topNFromCategory = scoredCommentsInCategory.slice(0, MIN_SUGGESTIONS_PER_CATEGORY);
-                combinedTopSuggestions = combinedTopSuggestions.concat(topNFromCategory);
-            }
-
-            // Sort all collected suggestions globally by similarity
-            combinedTopSuggestions.sort((a, b) => b.similarity - a.similarity);
-
-            // Get overall top 10 (or fewer if not enough unique suggestions)
-            const finalTopSuggestions = [];
-            const uniqueTexts = new Set();
-
-            for (const suggestion of combinedTopSuggestions) {
-                if (finalTopSuggestions.length >= 10) break;
-                if (!uniqueTexts.has(suggestion.comment.text)) {
-                    finalTopSuggestions.push(suggestion);
-                    uniqueTexts.add(suggestion.comment.text);
-                }
-            }
-
-            displayResults(finalTopSuggestions, lastName, isMale);
-        }
-
-        // Function to display results
-        function displayResults(suggestions, lastName, isMale) {
             const resultsDiv = document.getElementById('results');
             resultsDiv.innerHTML = ''; // Clear previous results
 
-            if (suggestions.length === 0) {
+            if (Object.keys(groupedSuggestions).length === 0) {
                 resultsDiv.innerHTML = '<p class="text-gray-600 text-center">Keine passenden Vorschläge gefunden.</p>';
                 return;
             }
@@ -1568,142 +1703,96 @@
             const genderPronounSubject = isMale ? 'er' : 'sie';
             const genderPronounPossessive = isMale ? 'sein' : 'ihr';
             const genderSalutation = isMale ? 'Herr' : 'Frau';
-            const colorIndicesSet = new Set([]);
 
-            suggestions.forEach((item, index) => {
-                colorIndicesSet.add(item.category);
-            });
-            const colorIndices = Array.from(colorIndicesSet).sort();
-            delete colorIndicesSet;
+            let categoryIndex = 0;
+            for (const category in groupedSuggestions) {
+                const categoryDiv = document.createElement('div');
+                categoryDiv.className = 'result-box p-4 rounded-lg shadow-sm mb-4';
 
-            suggestions.forEach((item, index) => {
-                let adaptedText = item.comment.text;
-
-                adaptedText = adaptedText.replace(/\[Er\/Sie\]/g, genderPronounSubject.charAt(0).toUpperCase() + genderPronounSubject.slice(1));
-                adaptedText = adaptedText.replace(/\[Seine\/Ihre\]/g, genderPronounPossessive.charAt(0).toUpperCase() + genderPronounPossessive.slice(1) + 'e');
-                adaptedText = adaptedText.replace(/\[Sein\/Ihr\]/g, genderPronounPossessive.charAt(0).toUpperCase() + genderPronounPossessive.slice(1));
-                adaptedText = adaptedText.replace(/\[seinen\/ihren\]/g, genderPronounPossessive + 'en');
-                adaptedText = adaptedText.replace(/\[ihm\/ihr\]/g, isMale ? 'ihm' : 'ihr');
-                adaptedText = adaptedText.replace(/\[Der Schüler\/Die Schülerin\]/g, isMale ? 'Der Schüler' : 'Die Schülerin');
-                adaptedText = adaptedText.replace(/\[Schüler\/Schülerin\]/g, `${genderSalutation} ${lastName}`);
-                adaptedText = adaptedText.replace(/Der Schüler/g, `${genderSalutation} ${lastName}`);
-                adaptedText = adaptedText.replace(/der Schüler/g, `${genderSalutation} ${lastName}`);
-                adaptedText = adaptedText.replace(/\bEr\b/g, genderPronounSubject.charAt(0).toUpperCase() + genderPronounSubject.slice(1));
-                adaptedText = adaptedText.replace(/\ber\b/g, genderPronounSubject);
-                adaptedText = adaptedText.replace(/\bIhm\b/g, isMale ? 'Ihm' : 'Ihr');
-                adaptedText = adaptedText.replace(/\bihm\b/g, isMale ? 'ihm' : 'ihr');
-                adaptedText = adaptedText.replace(/\[sein\/ihr\]/g, genderPronounPossessive);
-                adaptedText = adaptedText.replace(/\[seine\/ihre\]/g, genderPronounPossessive + 'e');
-                adaptedText = adaptedText.replace(/\bSeine\b/g, genderPronounPossessive.charAt(0).toUpperCase() + genderPronounPossessive.slice(1) + 'e');
-                adaptedText = adaptedText.replace(/\bseine\b/g, genderPronounPossessive + 'e');
-                adaptedText = adaptedText.replace(/\bSeiner\b/g, genderPronounPossessive.charAt(0).toUpperCase() + genderPronounPossessive.slice(1) + 'er');
-                adaptedText = adaptedText.replace(/\bseiner\b/g, genderPronounPossessive + 'er');
-                adaptedText = adaptedText.replace(/\bSein\b/g, genderPronounPossessive.charAt(0).toUpperCase() + genderPronounPossessive.slice(1));
-                adaptedText = adaptedText.replace(/\bsein\b/g, genderPronounPossessive);
-
-                const resultBox = document.createElement('div');
-                resultBox.className = 'result-box p-3 rounded-lg shadow-sm';
-                resultBox.innerHTML = `
-                    <div class="suggestion-header">
-                        <h3 class="text-lg font-semibold text-gray-800">Vorschlag ${index + 1} (Ähnlichkeit: ${(item.similarity * 100).toFixed(2)}%)</h3>
-                        <span class="category-label category-color-${colorIndices.indexOf(item.category)}">${item.category.charAt(0).toUpperCase() + item.category.slice(1)}</span>
-                    </div>
-                    <div class="suggestion-text-and-button">
-                        <p class="text-gray-700 text-base suggestion-text">${adaptedText}</p>
-                        <button class="save-button bg-green-500 hover:bg-green-600 text-white text-sm font-bold py-1 px-3 rounded-lg flex-shrink-0 transition duration-200 ease-in-out"
-                                data-text="${adaptedText}"
-                                data-original-code="${item.comment.code}"
-                                data-category="${item.category}">
-                            Speichern
-                        </button>
-                    </div>
-                    <div class="trait-stats-container mt-2">
-                        <div class="collapsible-header">
-                            <h4 class="font-semibold text-gray-700 text-sm">Eigenschafts-Vergleich:</h4>
-                            <span class="collapsible-icon transform transition-transform duration-200 ease-in-out">&#9654;</span>
-                        </div>
-                        <div class="collapsible-content p-3 bg-gray-50 rounded-b-lg border border-gray-200 border-t-0 text-xs">
-                            <table class="w-full text-left table-auto">
-                                <thead>
-                                    <tr class="bg-gray-100">
-                                        <th class="p-1">Eigenschaft</th>
-                                        <th class="p-1">Ihre Eingabe</th>
-                                        <th class="p-1">Text-Gewichtung</th>
-                                        <th class="p-1">Einzelbeitrag</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${Object.keys(item.userTraitsSnapshot).map(trait => {
-                                        const userVal = item.userTraitsSnapshot[trait];
-                                        const commentValOrNull = item.comment.weights[trait];
-                                        const commentValDisplay = (commentValOrNull !== undefined && commentValOrNull !== null) ? commentValOrNull.toFixed(1) : 'N/A';
-
-                                        let contribution = 'N/A';
-                                        if (commentValOrNull !== undefined && commentValOrNull !== null && !isNaN(userVal)) {
-                                           const diff = Math.abs(userVal - commentValOrNull);
-                                           // Contribution: 1 is perfect match, 0 is max diff (sqrt(2) away), can be negative if diff > 1.
-                                           // Let's ensure it's capped at 0 for display if it was negative.
-                                           contribution = Math.max(0, (1 - Math.sqrt(diff))).toFixed(2);
-                                        }
-
-                                        return `
-                                            <tr>
-                                                <td class="p-1 border-t border-gray-200">${trait.replace(/_/g, ' ')}</td>
-                                                <td class="p-1 border-t border-gray-200">${userVal.toFixed(1)}</td>
-                                                <td class="p-1 border-t border-gray-200">${commentValDisplay}</td>
-                                                <td class="p-1 border-t border-gray-200">${contribution}</td>
-                                            </tr>
-                                        `;
-                                    }).join('')}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+                const header = document.createElement('div');
+                header.className = 'collapsible-header';
+                header.innerHTML = `
+                    <h3 class="text-lg font-semibold text-gray-800">${category.replace(/_/g, ' ')}</h3>
+                    <span class="collapsible-icon rotated">&#9658;</span> <!-- Right arrow -->
                 `;
-                resultsDiv.appendChild(resultBox);
+                categoryDiv.appendChild(header);
 
-                const collapsibleHeader = resultBox.querySelector('.collapsible-header');
-                const collapsibleContent = resultBox.querySelector('.collapsible-content');
-                const collapsibleIcon = resultBox.querySelector('.collapsible-icon');
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'collapsible-content space-y-3 expanded'; // Add space-y for vertical spacing
 
-                collapsibleHeader.addEventListener('click', () => {
-                    collapsibleContent.classList.toggle('expanded');
-                    collapsibleIcon.classList.toggle('rotated');
+                groupedSuggestions[category].forEach(item => {
+                    const originalText = item.comment.text;
+                    const personalizedText = originalText
+                        .replace(/\[Er\/Sie\]/g, genderPronounSubject.charAt(0).toUpperCase() + genderPronounSubject.slice(1))
+                        .replace(/\[Seine\/Ihre\]/g, genderPronounPossessive.charAt(0).toUpperCase() + genderPronounPossessive.slice(1) + 'e')
+                        .replace(/\[Sein\/Ihr\]/g, genderPronounPossessive.charAt(0).toUpperCase() + genderPronounPossessive.slice(1))
+                        .replace(/\[seinen\/ihren\]/g, genderPronounPossessive + 'en')
+                        .replace(/\[ihm\/ihr\]/g, isMale ? 'ihm' : 'ihr')
+                        .replace(/\[Der Schüler\/Die Schülerin\]/g, isMale ? 'Der Schüler' : 'Die Schülerin')
+                        .replace(/\[Schüler\/Schülerin\]/g, `${genderSalutation} ${lastName}`)
+                        .replace(/Der Schüler/g, `${genderSalutation} ${lastName}`)
+                        .replace(/der Schüler/g, `${genderSalutation} ${lastName}`)
+                        .replace(/\bEr\b/g, genderPronounSubject.charAt(0).toUpperCase() + genderPronounSubject.slice(1))
+                        .replace(/\ber\b/g, genderPronounSubject)
+                        .replace(/\bIhm\b/g, isMale ? 'Ihm' : 'Ihr')
+                        .replace(/\bihm\b/g, isMale ? 'ihm' : 'ihr')
+                        .replace(/\[sein\/ihr\]/g, genderPronounPossessive)
+                        .replace(/\[seine\/ihre\]/g, genderPronounPossessive + 'e')
+                        .replace(/\bSeine\b/g, genderPronounPossessive.charAt(0).toUpperCase() + genderPronounPossessive.slice(1) + 'e')
+                        .replace(/\bseine\b/g, genderPronounPossessive + 'e')
+                        .replace(/\bSeiner\b/g, genderPronounPossessive.charAt(0).toUpperCase() + genderPronounPossessive.slice(1) + 'er')
+                        .replace(/\bseiner\b/g, genderPronounPossessive + 'er')
+                        .replace(/\bSein\b/g, genderPronounPossessive.charAt(0).toUpperCase() + genderPronounPossessive.slice(1))
+                        .replace(/\bsein\b/g, genderPronounPossessive);
+                    const suggestionItemDiv = document.createElement('div');
+                    suggestionItemDiv.className = 'suggestion-text-and-button';
+
+                    const textSpan = document.createElement('span');
+                    textSpan.className = 'suggestion-text text-gray-700';
+                    textSpan.textContent = personalizedText;
+                    suggestionItemDiv.appendChild(textSpan);
+
+                    const actionsDiv = document.createElement('div');
+                    actionsDiv.className = 'flex flex-col space-y-2'; // Stack buttons vertically
+
+                    /*const copyButton = document.createElement('button');
+                    copyButton.className = 'bg-green-500 hover:bg-green-600 text-white text-xs font-bold py-1 px-2 rounded-md transition duration-150 ease-in-out shadow-sm';
+                    copyButton.textContent = 'Kopieren';
+                    copyButton.onclick = function() {
+                        document.execCommand('copy'); // Fallback for clipboard API issues in iframes
+                        const tempInput = document.createElement('textarea');
+                        tempInput.value = personalizedText;
+                        document.body.appendChild(tempInput);
+                        tempInput.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(tempInput);
+                        displayMessage('Text kopiert!', 'success');
+                    };
+                    actionsDiv.appendChild(copyButton);*/
+
+                    const saveButton = document.createElement('button');
+                    saveButton.className = 'bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold py-1 px-2 rounded-md transition duration-150 ease-in-out shadow-sm';
+                    saveButton.textContent = 'Speichern';
+                    saveButton.onclick = function() {
+                        saveAssessment(lastName, personalizedText, item.comment.code, item.category);
+                    };
+                    actionsDiv.appendChild(saveButton);
+
+                    suggestionItemDiv.appendChild(actionsDiv);
+                    contentDiv.appendChild(suggestionItemDiv);
                 });
-            });
 
-            document.querySelectorAll('.save-button').forEach(button => {
-                button.addEventListener('click', function() {
-                    const textToSave = this.dataset.text;
-                    const originalCode = this.dataset.originalCode;
-                    const category = this.dataset.category;
-                    const currentLastName = document.getElementById('lastName').value.trim();
-                    saveAssessment(currentLastName, textToSave, originalCode, category);
-                    displayMessage('Text erfolgreich gespeichert!', 'info');
+                categoryDiv.appendChild(contentDiv);
+                resultsDiv.appendChild(categoryDiv);
+
+                // Add click listener for collapsible header
+                header.addEventListener('click', function() {
+                    contentDiv.classList.toggle('expanded');
+                    const icon = this.querySelector('.collapsible-icon');
+                    icon.classList.toggle('rotated');
                 });
-            });
-        }
 
-        function displayMessage(message, type = 'info') {
-            let messageDiv = document.getElementById('appMessage');
-            if (!messageDiv) {
-                messageDiv = document.createElement('div');
-                messageDiv.id = 'appMessage';
-                // Insert after the buttons container for better layout
-                const buttonsContainer = document.querySelector('.flex.flex-col.sm\\:flex-row.gap-4.mb-8');
-                buttonsContainer.insertAdjacentElement('afterend', messageDiv);
-            }
-
-            messageDiv.textContent = message;
-            if (type === 'error') {
-                messageDiv.className = 'my-4 p-3 rounded-lg text-red-700 bg-red-100 border border-red-200 text-center';
-            } else {
-                messageDiv.className = 'my-4 p-3 rounded-lg text-gray-700 bg-gray-100 border border-gray-200 text-center';
-            }
-            if (!message) {
-                messageDiv.style.display = 'none';
-            } else {
-                messageDiv.style.display = 'block';
+                categoryIndex++;
             }
         }
 
@@ -1730,7 +1819,7 @@
                     // For now, we prevent re-saving if the originalCode matches.
                     // If a user wants to save a *variation* it.should perhaps be treated differently.
                     // However, current logic: if originalCode is there, don't add.
-                     displayMessage('Ein Text mit diesem Ursprungscode ist bereits für diesen Schüler gespeichert.', 'info');
+                     displayMessage('Ein Text mit diesem Ursprungscode ist bereits für diese Schülerin / diesen Schüler gespeichert.', 'info');
                 } else if (existingItemIndex === -1) {
                     // This case should not be reached due to outer if, but for safety:
                     assessments[lastName].push(newItem);
