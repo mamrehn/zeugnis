@@ -1,0 +1,1846 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schülerbeurteilungs-App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: "Inter", sans-serif;
+            background-color: #f0f4f8;
+        }
+        .slider-container {
+            width: 100%;
+        }
+        .slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 10px;
+            background: #d3d3d3; /* Default neutral gray */
+            outline: none;
+            opacity: 0.7;
+            -webkit-transition: .2s;
+            transition: opacity .2s, background-color .2s; /* Add background-color to transition */
+            border-radius: 5px;
+        }
+        .slider:hover {
+            opacity: 1;
+        }
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #4a90e2;
+            cursor: pointer;
+            border-radius: 50%;
+        }
+        .slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: #4a90e2;
+            cursor: pointer;
+            border-radius: 50%;
+        }
+        /* Slider color feedback */
+        .slider.negative {
+            background-color: #fca5a5; /* Light red */
+        }
+        .slider.positive {
+            background-color: #a7f3d0; /* Light green */
+        }
+        .slider.neutral {
+            background-color: #d3d3d3; /* Neutral gray */
+        }
+
+        .toggle-button {
+            background-color: #e0e7ff;
+            color: #4338ca;
+            border: 1px solid #818cf8;
+        }
+        .toggle-button.active {
+            background-color: #4338ca;
+            color: white;
+        }
+        .result-box {
+            background-color: #ffffff;
+            border-left: 5px solid #4a90e2;
+        }
+        /* Modal Styles */
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 1000; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: auto;
+            padding: 20px;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 900px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+        .close-button {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .close-button:hover,
+        .close-button:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        /* Collapsible Section Styles */
+        .collapsible-header {
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0.75rem; /* Reduced padding */
+            background-color: #f1f5f9; /* Light gray background */
+            border-radius: 0.5rem 0.5rem 0 0; /* Rounded top corners */
+            border: 1px solid #e2e8f0; /* Light border */
+        }
+        .collapsible-content {
+            display: none; /* Hidden by default */
+            padding: 0.5rem 0.75rem; /* Reduced padding */
+            border: 1px solid #e2e8f0;
+            border-top: none; /* No top border, blends with header */
+            border-radius: 0 0 0.5rem 0.5rem; /* Rounded bottom corners */
+        }
+        .collapsible-content.expanded {
+            display: block; /* Show when expanded */
+        }
+        .collapsible-icon {
+            transition: transform 0.2s ease-in-out;
+        }
+        .collapsible-icon.rotated {
+            transform: rotate(90deg); /* Rotate icon when expanded */
+        }
+        .saved-text-item {
+            display: inline-block;
+            margin-right: 0.5rem;
+            margin-bottom: 0.25rem;
+            padding: 0.2rem 0.4rem;
+            background-color: #e0f2f7;
+            border-radius: 0.25rem;
+            border: 1px solid #b2ebf2;
+        }
+        .saved-text-item button {
+            margin-left: 0.5rem;
+        }
+        /* Compact suggestion layout */
+        .suggestion-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.25rem; /* Reduced margin */
+        }
+        .suggestion-text-and-button {
+            display: flex;
+            align-items: flex-start; /* Align text to top */
+            justify-content: space-between;
+            gap: 0.5rem; /* Space between text and button */
+            margin-bottom: 0.5rem; /* Reduced margin */
+        }
+        .suggestion-text {
+            flex-grow: 1;
+            line-height: 1.4; /* Adjust line height for compactness */
+        }
+        .category-label {
+            background-color: #bfdbfe; /* Light blue */
+            color: #1e40af; /* Darker blue text */
+            padding: 0.1rem 0.4rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem; /* Smaller font */
+            font-weight: 500;
+            margin-left: 0.5rem;
+        }
+        /* Label colors */
+        .category-color-0 { background-color: #2563eb; color: black; filter: brightness(190%); } /* Blue */
+        .category-color-1 { background-color: #059669; color: black; filter: brightness(190%); } /* Green */
+        .category-color-2 { background-color: #ea580c; color: black; filter: brightness(190%); } /* Orange */
+        .category-color-3 { background-color: #9333ea; color: black; filter: brightness(190%); } /* Purple */
+        .category-color-4 { background-color: #0f766e; color: black; filter: brightness(190%); } /* Teal */
+        .category-color-5 { background-color: #b5db2b; color: black; filter: brightness(190%); } /* Yellow */
+
+    </style>
+</head>
+<body class="p-6">
+    <div class="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-lg">
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-8">Zeugnisbeurteilungen (Alpha)</h1>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div>
+                <label for="lastName" class="block text-gray-700 text-sm font-semibold mb-2">Nachname der Schülerin / des Schülers:</label>
+                <input type="text" id="lastName" class="shadow-sm appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-400" placeholder="z.B. Müller">
+            </div>
+
+            <div>
+                <label class="block text-gray-700 text-sm font-semibold mb-2">Anrede:</label>
+                <div class="flex rounded-lg border border-gray-300 overflow-hidden">
+                    <button id="genderMale" class="flex-1 py-2 px-4 text-center toggle-button active rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-400">Männlich</button>
+                    <button id="genderFemale" class="flex-1 py-2 px-4 text-center toggle-button rounded-r-lg focus:outline-none focus:ring-2 focus:ring-blue-400">Weiblich</button>
+                </div>
+            </div>
+        </div>
+
+        <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">Gezeigte Eigenschaften</h2>
+
+        <div id="traitsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            </div>
+
+        <div class="flex flex-col sm:flex-row gap-4 mb-8">
+            <button id="generateSuggestions" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition duration-200 ease-in-out shadow-md">
+                Vorschläge generieren
+            </button>
+            <button id="showSavedTexts" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-3 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-75 transition duration-200 ease-in-out shadow-md">
+                Gespeicherte Texte anzeigen
+            </button>
+        </div>
+
+        <div id="results" class="mt-10 space-y-6">
+            </div>
+    </div>
+
+    <div id="savedTextsModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">Gespeicherte Schülerbeurteilungen</h2>
+            <div id="savedTextsTableContainer" class="overflow-x-auto">
+                </div>
+        </div>
+    </div>
+
+    <script>
+        let studentAssessmentData; // Global variable to hold the JSON data
+        const LOCAL_STORAGE_KEY = 'studentAssessments';
+        const MIN_SUGGESTIONS_PER_CATEGORY = 3; // Minimum suggestions to pick from each category
+
+        // Trait descriptions mapping
+        const traitDescriptions = {
+            "Mitarbeit": {
+                "-1.0": "Passiv zurückhaltend",
+                "0.0": "Neutral",
+                "1.0": "Hervorragend engagiert"
+            },
+            "Sozialverhalten": {
+                "-1.0": "Problematisch störend",
+                "0.0": "Neutral",
+                "1.0": "Vorbildlich sozial"
+            },
+            "Aktivitaetsniveau": {
+                "-1.0": "Unruhig störend",
+                "0.0": "Neutral",
+                "1.0": "Ruhig besonnen"
+            },
+            "Lernhaltung": {
+                "-1.0": "Nachlässig gleichgültig",
+                "0.0": "Neutral",
+                "1.0": "Fleißig zielstrebig"
+            },
+            "Aufmerksamkeit": {
+                "-1.0": "Desinteressiert abgelenkt",
+                "0.0": "Neutral",
+                "1.0": "Interessiert fokussiert"
+            },
+            "Selbststaendigkeit": {
+                "-1.0": "Unselbstständig abhängig",
+                "0.0": "Neutral",
+                "1.0": "Eigenverantwortlich selbstständig"
+            }
+        };
+
+        // Function to load JSON data
+        async function loadJsonData() {
+            studentAssessmentData = {
+  "Mitarbeit": {
+    "datum": "2025-05-20",
+    "1": {
+      "comments": [
+        {
+          "code": "a201",
+          "text": "Die Mitarbeit war hervorragend.",
+          "weights": {
+            "Mitarbeit": 1.0,
+            "Sozialverhalten": null,
+            "Aktivitaetsniveau": null,
+            "Lernhaltung": 0.7,
+            "Aufmerksamkeit": 0.7,
+            "Selbststaendigkeit": null
+          },
+          "reason": "Directly states 'hervorragend' (excellent) participation. Implies positive Lernhaltung and Aufmerksamkeit."
+        },
+        {
+          "code": "a201a",
+          "text": "[Schüler/Schülerin] arbeitete stets interessiert und fleißig mit.",
+          "weights": {
+            "Mitarbeit": 0.9,
+            "Sozialverhalten": null,
+            "Aktivitaetsniveau": null,
+            "Lernhaltung": 0.9,
+            "Aufmerksamkeit": 0.9,
+            "Selbststaendigkeit": null
+          },
+          "reason": "States 'interessiert und fleißig mit' (participated with interest and diligence), directly impacting Mitarbeit, Lernhaltung, and Aufmerksamkeit."
+        },
+        {
+          "code": "a201b",
+          "text": "[Schüler/Schülerin] arbeitete sehr engagiert mit und bereicherte den Unterricht mit eigenen Beiträgen.",
+          "weights": {
+            "Mitarbeit": 1.0,
+            "Sozialverhalten": 0.3,
+            "Aktivitaetsniveau": null,
+            "Lernhaltung": 0.6,
+            "Aufmerksamkeit": 0.6,
+            "Selbststaendigkeit": 0.6
+          },
+          "reason": "States 'sehr engagiert mit' and 'eigenen Beiträgen', indicating excellent Mitarbeit and some Selbstständigkeit. Enriching class has minor positive Sozialverhalten."
+        },
+        {
+          "code": "a201c",
+          "text": "[Schüler/Schülerin] arbeitete im Unterricht stets sehr gut mit.",
+          "weights": {
+            "Mitarbeit": 0.9,
+            "Sozialverhalten": null,
+            "Aktivitaetsniveau": null,
+            "Lernhaltung": 0.5,
+            "Aufmerksamkeit": 0.5,
+            "Selbststaendigkeit": null
+          },
+          "reason": "States 'stets sehr gut mit' (always participated very well), strongly positive for Mitarbeit. Implies good Lernhaltung and Aufmerksamkeit."
+        }
+      ]
+    },
+    "2": {
+      "comments": [
+        {
+          "code": "a202",
+          "text": "Die Mitarbeit war anerkennenswert.",
+          "weights": {
+            "Mitarbeit": 0.7,
+            "Sozialverhalten": null,
+            "Aktivitaetsniveau": null,
+            "Lernhaltung": 0.4,
+            "Aufmerksamkeit": 0.4,
+            "Selbststaendigkeit": null
+          },
+          "reason": "States 'anerkennenswert' (commendable) participation. Implies positive Lernhaltung and Aufmerksamkeit."
+        },
+        {
+          "code": "a202a",
+          "text": "[Schüler/Schülerin] zeigte großes Interesse und sicheres Urteilsvermögen.",
+          "weights": {
+            "Mitarbeit": 0.3,
+            "Sozialverhalten": null,
+            "Aktivitaetsniveau": null,
+            "Lernhaltung": 0.7,
+            "Aufmerksamkeit": 0.8,
+            "Selbststaendigkeit": 0.5
+          },
+          "reason": "Highlights 'großes Interesse' (Aufmerksamkeit, Lernhaltung) and 'sicheres Urteilsvermögen' (Selbstständigkeit). Slight positive for Mitarbeit as these foster it."
+        },
+        {
+          "code": "a202b",
+          "text": "[Schüler/Schülerin] beteiligte sich rege am Unterricht und kam [seinen/ihren] Verpflichtungen verlässlich nach.",
+          "weights": {
+            "Mitarbeit": 0.8,
+            "Sozialverhalten": null,
+            "Aktivitaetsniveau": 0.0,
+            "Lernhaltung": 0.6,
+            "Aufmerksamkeit": 0.5,
+            "Selbststaendigkeit": 0.3
+          },
+          "reason": "'Rege beteiligt' (active participation) for Mitarbeit. 'Verlässlich Verpflichtungen nachgekommen' for Lernhaltung and some Selbstständigkeit. 'Rege' suggests an activity level that is neither disruptive nor explicitly composed (0.0)."
+        },
+        {
+          "code": "a202c",
+          "text": "[Schüler/Schülerin] arbeitete zielstrebig und fleißig mit.",
+          "weights": {
+            "Mitarbeit": 0.8,
+            "Sozialverhalten": null,
+            "Aktivitaetsniveau": null,
+            "Lernhaltung": 0.9,
+            "Aufmerksamkeit": 0.6,
+            "Selbststaendigkeit": 0.2
+          },
+          "reason": "States 'zielstrebig und fleißig mit' (participated determinedly and diligently), strong for Mitarbeit and Lernhaltung."
+        }
+      ]
+    },
+    "3": {
+      "comments": [
+        {
+          "code": "a203",
+          "text": "Die Mitarbeit war befriedigend.",
+          "weights": {
+            "Mitarbeit": 0.5,
+            "Sozialverhalten": null,
+            "Aktivitaetsniveau": null,
+            "Lernhaltung": 0.2,
+            "Aufmerksamkeit": 0.2,
+            "Selbststaendigkeit": null
+          },
+          "reason": "States 'befriedigend' (satisfactory) participation. Mildly implies some Lernhaltung and Aufmerksamkeit."
+        },
+        {
+          "code": "a203a",
+          "text": "[Schüler/Schülerin] zeigte eine befriedigende Mitarbeit.",
+          "weights": {
+            "Mitarbeit": 0.5,
+            "Sozialverhalten": null,
+            "Aktivitaetsniveau": null,
+            "Lernhaltung": 0.2,
+            "Aufmerksamkeit": 0.2,
+            "Selbststaendigkeit": null
+          },
+          "reason": "Same as a203: 'befriedigende Mitarbeit' implies satisfactory Mitarbeit with some Lernhaltung and Aufmerksamkeit."
+        },
+        {
+          "code": "a203b",
+          "text": "[Schüler/Schülerin] arbeitete im Unterricht stets durchschnittlich mit.",
+          "weights": {
+            "Mitarbeit": 0.4,
+            "Sozialverhalten": null,
+            "Aktivitaetsniveau": null,
+            "Lernhaltung": 0.1,
+            "Aufmerksamkeit": 0.1,
+            "Selbststaendigkeit": null
+          },
+          "reason": "'Durchschnittlich mitgearbeitet' (average participation) indicates moderate Mitarbeit. Very slight implications for Lernhaltung/Aufmerksamkeit."
+        },
+        {
+          "code": "a203c",
+          "text": "[Schüler/Schülerin] leistete gute Beiträge, sollte aber aktiver mitarbeiten.",
+          "weights": {
+            "Mitarbeit": 0.3,
+            "Sozialverhalten": null,
+            "Aktivitaetsniveau": -0.3,
+            "Lernhaltung": null,
+            "Aufmerksamkeit": 0.2,
+            "Selbststaendigkeit": 0.2
+          },
+          "reason": "Mixed Mitarbeit: 'gute Beiträge' (+) but 'sollte aktiver' (-). Lack of activity suggests passivity (Aktivitätsniveau). Some Aufmerksamkeit for contributions."
+        }
+      ]
+    },
+    "4": {
+      "comments": [
+        {
+          "code": "a204",
+          "text": "Die Mitarbeit war angemessen.",
+          "weights": {
+            "Mitarbeit": 0.2,
+            "Sozialverhalten": null,
+            "Aktivitaetsniveau": null,
+            "Lernhaltung": null,
+            "Aufmerksamkeit": null,
+            "Selbststaendigkeit": null
+          },
+          "reason": "'Angemessen' (adequate) Mitarbeit is low positive. Other dimensions not clearly inferable."
+        },
+        {
+          "code": "a204a",
+          "text": "[Schüler/Schülerin] folgte dem Unterricht meist aufmerksam, sollte sich jedoch aktiver in das Unterrichtsgeschehen einbringen.",
+          "weights": {
+            "Mitarbeit": -0.2,
+            "Sozialverhalten": null,
+            "Aktivitaetsniveau": -0.4,
+            "Lernhaltung": null,
+            "Aufmerksamkeit": 0.4,
+            "Selbststaendigkeit": null
+          },
+          "reason": "Lacking active Mitarbeit ('sollte aktiver einbringen'). 'Meist aufmerksam' for Aufmerksamkeit. Passivity affects Aktivitätsniveau negatively."
+        },
+        {
+          "code": "a204b",
+          "text": "[Schüler/Schülerin] arbeitete mit wechselndem Interesse und Einsatz im Unterricht mit.",
+          "weights": {
+            "Mitarbeit": -0.3,
+            "Sozialverhalten": null,
+            "Aktivitaetsniveau": null,
+            "Lernhaltung": -0.4,
+            "Aufmerksamkeit": -0.4,
+            "Selbststaendigkeit": null
+          },
+          "reason": "'Wechselndes Interesse und Einsatz' negatively impacts Mitarbeit, Lernhaltung, and Aufmerksamkeit, indicating inconsistency."
+        },
+        {
+          "code": "a204c",
+          "text": "[Schüler/Schülerin] arbeitete zufriedenstellend mit.",
+          "weights": {
+            "Mitarbeit": 0.3,
+            "Sozialverhalten": null,
+            "Aktivitaetsniveau": null,
+            "Lernhaltung": null,
+            "Aufmerksamkeit": null,
+            "Selbststaendigkeit": null
+          },
+          "reason": "'Zufriedenstellend mitgearbeitet' (satisfactory participation) indicates modest Mitarbeit. Other dimensions not clearly inferable."
+        }
+      ]
+    },
+    "5": {
+      "comments": [
+        {
+          "code": "a205",
+          "text": "Die Mitarbeit war schwankend.",
+          "weights": {
+            "Mitarbeit": -0.5,
+            "Sozialverhalten": null,
+            "Aktivitaetsniveau": null,
+            "Lernhaltung": -0.5,
+            "Aufmerksamkeit": -0.5,
+            "Selbststaendigkeit": null
+          },
+          "reason": "'Schwankend' (fluctuating) Mitarbeit negatively impacts Lernhaltung and Aufmerksamkeit due to inconsistency."
+        },
+        {
+          "code": "a205a",
+          "text": "[Schüler/Schülerin] arbeitete mit geringem Interesse im Unterricht mit.",
+          "weights": {
+            "Mitarbeit": -0.7,
+            "Sozialverhalten": null,
+            "Aktivitaetsniveau": -0.2,
+            "Lernhaltung": -0.7,
+            "Aufmerksamkeit": -0.8,
+            "Selbststaendigkeit": null
+          },
+          "reason": "'Geringes Interesse' directly means low Aufmerksamkeit and Lernhaltung, leading to poor Mitarbeit. Implies some passivity for Aktivitätsniveau."
+        },
+        {
+          "code": "a205b",
+          "text": "[Schüler/Schülerin] zeigte wenig Sorgfalt und Einsatzbereitschaft.",
+          "weights": {
+            "Mitarbeit": -0.6,
+            "Sozialverhalten": null,
+            "Aktivitaetsniveau": null,
+            "Lernhaltung": -0.9,
+            "Aufmerksamkeit": -0.3,
+            "Selbststaendigkeit": -0.2
+          },
+          "reason": "'Wenig Sorgfalt und Einsatzbereitschaft' is strongly negative for Lernhaltung. Impacts Mitarbeit and implies some lack of Aufmerksamkeit and Selbstständigkeit."
+        },
+        {
+          "code": "a205c",
+          "text": "[Schüler/Schülerin] war nicht immer bemüht, den üblichen Arbeitsaufwand zu bewältigen.",
+          "weights": {
+            "Mitarbeit": -0.4,
+            "Sozialverhalten": null,
+            "Aktivitaetsniveau": null,
+            "Lernhaltung": -0.7,
+            "Aufmerksamkeit": null,
+            "Selbststaendigkeit": -0.4
+          },
+          "reason": "Not always trying to manage workload ('nicht immer bemüht') points to negative Lernhaltung and some issues with Selbstständigkeit. Impacts Mitarbeit."
+        }
+      ]
+    },
+    "6": {
+      "comments": [
+        {
+          "code": "a206",
+          "text": "Die Mitarbeit war zu gering.",
+          "weights": {
+            "Mitarbeit": -0.9,
+            "Sozialverhalten": null,
+            "Aktivitaetsniveau": null,
+            "Lernhaltung": -0.3,
+            "Aufmerksamkeit": -0.3,
+            "Selbststaendigkeit": null
+          },
+          "reason": "'Zu gering' (too little) Mitarbeit is highly negative. Implies some lack of Lernhaltung and Aufmerksamkeit. Aktivitätsniveau poles (unruhig/ruhig) don't fit 'passive'."
+        }
+      ]
+    },
+    "other": {
+      "comments": [
+        {
+          "code": "a207",
+          "text": "Das Unterrichtsgeschehen wurde aufmerksam und konzentriert verfolgt.",
+          "weights": {
+            "Mitarbeit": 0.2,
+            "Sozialverhalten": null,
+            "Aktivitaetsniveau": 0.5,
+            "Lernhaltung": 0.3,
+            "Aufmerksamkeit": 0.9,
+            "Selbststaendigkeit": null
+          },
+          "reason": "'Aufmerksam und konzentriert verfolgt' is strong for Aufmerksamkeit. Implies 'ruhig besonnen' for Aktivitätsniveau and some positive Mitarbeit (passive) and Lernhaltung."
+        }
+      ]
+    }
+  },
+  "Verhalten": {
+    "datum": "2025-05-20",
+    "1": {
+      "comments": [
+        {
+          "code": "a211",
+          "text": "Das Verhalten war vorbildlich.",
+          "weights": {
+            "Mitarbeit": null,
+            "Sozialverhalten": 1.0,
+            "Aktivitaetsniveau": 0.8,
+            "Lernhaltung": null,
+            "Aufmerksamkeit": null,
+            "Selbststaendigkeit": null
+          },
+          "reason": "'Vorbildlich' (exemplary) Verhalten is max for Sozialverhalten. Strongly implies 'ruhig besonnen' for Aktivitätsniveau."
+        },
+        {
+          "code": "a211a",
+          "text": "Das Verhalten war sehr lobenswert.",
+          "weights": {
+            "Mitarbeit": null,
+            "Sozialverhalten": 0.9,
+            "Aktivitaetsniveau": 0.7,
+            "Lernhaltung": null,
+            "Aufmerksamkeit": null,
+            "Selbststaendigkeit": null
+          },
+          "reason": "'Sehr lobenswert' (very commendable) Verhalten is high for Sozialverhalten. Implies 'ruhig besonnen' for Aktivitätsniveau."
+        },
+        {
+          "code": "a211b",
+          "text": "Das Verhalten verdiente vollste Anerkennung.",
+          "weights": {
+            "Mitarbeit": null,
+            "Sozialverhalten": 0.9,
+            "Aktivitaetsniveau": 0.7,
+            "Lernhaltung": null,
+            "Aufmerksamkeit": null,
+            "Selbststaendigkeit": null
+          },
+          "reason": "'Vollste Anerkennung' (fullest recognition) for Verhalten indicates high Sozialverhalten. Implies 'ruhig besonnen' for Aktivitätsniveau."
+        },
+        {
+          "code": "a211c",
+          "text": "[Er/Sie] erfreute durch mustergültiges Benehmen.",
+          "weights": {
+            "Mitarbeit": null,
+            "Sozialverhalten": 1.0,
+            "Aktivitaetsniveau": 0.8,
+            "Lernhaltung": null,
+            "Aufmerksamkeit": null,
+            "Selbststaendigkeit": null
+          },
+          "reason": "'Mustergültiges Benehmen' (exemplary conduct) is max for Sozialverhalten. Strongly implies 'ruhig besonnen' for Aktivitätsniveau."
+        }
+      ]
+    },
+    "2": {
+      "comments": [
+        {
+          "code": "a212",
+          "text": "Das Verhalten war lobenswert.",
+          "weights": {
+            "Mitarbeit": null,
+            "Sozialverhalten": 0.8,
+            "Aktivitaetsniveau": 0.6,
+            "Lernhaltung": null,
+            "Aufmerksamkeit": null,
+            "Selbststaendigkeit": null
+          },
+          "reason": "'Lobenswert' (commendable) Verhalten for Sozialverhalten. Implies 'ruhig besonnen' for Aktivitätsniveau."
+        },
+        {
+          "code": "a212a",
+          "text": "[Sein/Ihr] tadelloses Benehmen brachte [ihm/ihr] Anerkennung und große Wertschätzung ein.",
+          "weights": {
+            "Mitarbeit": null,
+            "Sozialverhalten": 0.9,
+            "Aktivitaetsniveau": 0.7,
+            "Lernhaltung": null,
+            "Aufmerksamkeit": null,
+            "Selbststaendigkeit": null
+          },
+          "reason": "'Tadelloses Benehmen' (impeccable conduct) is high for Sozialverhalten. Implies 'ruhig besonnen' for Aktivitätsniveau."
+        },
+        {
+          "code": "a212b",
+          "text": "Freundlichkeit und Hilfsbereitschaft verschafften [ihm/ihr] Anerkennung.",
+          "weights": {
+            "Mitarbeit": 0.2,
+            "Sozialverhalten": 0.8,
+            "Aktivitaetsniveau": 0.4,
+            "Lernhaltung": null,
+            "Aufmerksamkeit": null,
+            "Selbststaendigkeit": 0.1
+          },
+          "reason": "'Freundlichkeit und Hilfsbereitschaft' directly describe positive Sozialverhalten. Implies positive Aktivitätsniveau. Slight positive for Mitarbeit."
+        },
+        {
+          "code": "a212c",
+          "text": "[Seine/Ihre] gewandten Umgangsformen fielen angenehm auf.",
+          "weights": {
+            "Mitarbeit": null,
+            "Sozialverhalten": 0.7,
+            "Aktivitaetsniveau": 0.5,
+            "Lernhaltung": null,
+            "Aufmerksamkeit": null,
+            "Selbststaendigkeit": null
+          },
+          "reason": "'Gewandte Umgangsformen' (polished manners) are positive for Sozialverhalten. Implies 'ruhig besonnen' for Aktivitätsniveau."
+        }
+      ]
+    },
+    "3": {
+      "comments": [
+        {
+          "code": "a213",
+          "text": "Das Verhalten war einwandfrei.",
+          "weights": {
+            "Mitarbeit": null,
+            "Sozialverhalten": 0.6,
+            "Aktivitaetsniveau": 0.4,
+            "Lernhaltung": null,
+            "Aufmerksamkeit": null,
+            "Selbststaendigkeit": null
+          },
+          "reason": "'Einwandfrei' (unobjectionable) Verhalten is good for Sozialverhalten. Implies 'ruhig besonnen' for Aktivitätsniveau."
+        },
+        {
+          "code": "a213a",
+          "text": "Das Verhalten war meistens ordentlich.",
+          "weights": {
+            "Mitarbeit": null,
+            "Sozialverhalten": 0.4,
+            "Aktivitaetsniveau": 0.3,
+            "Lernhaltung": null,
+            "Aufmerksamkeit": null,
+            "Selbststaendigkeit": null
+          },
+          "reason": "'Meistens ordentlich' (mostly orderly) Verhalten for Sozialverhalten. 'Ordentlich' supports positive Aktivitätsniveau."
+        },
+        {
+          "code": "a213b",
+          "text": "Das Verhalten war insgesamt befriedigend.",
+          "weights": {
+            "Mitarbeit": null,
+            "Sozialverhalten": 0.5,
+            "Aktivitaetsniveau": 0.3,
+            "Lernhaltung": null,
+            "Aufmerksamkeit": null,
+            "Selbststaendigkeit": null
+          },
+          "reason": "'Insgesamt befriedigend' (overall satisfactory) Verhalten for Sozialverhalten. Implies positive Aktivitätsniveau."
+        },
+        {
+          "code": "a213c",
+          "text": "Das Verhalten gab keinen Anlass zu Beanstandungen.",
+          "weights": {
+            "Mitarbeit": null,
+            "Sozialverhalten": 0.5,
+            "Aktivitaetsniveau": 0.4,
+            "Lernhaltung": null,
+            "Aufmerksamkeit": null,
+            "Selbststaendigkeit": null
+          },
+          "reason": "'Kein Anlass zu Beanstandungen' (no cause for complaint) means good Sozialverhalten. Implies 'ruhig besonnen' for Aktivitätsniveau."
+        }
+      ]
+    },
+    "4": {
+      "comments": [
+        {
+          "code": "a214",
+          "text": "Das Verhalten war zufriedenstellend.",
+          "weights": {
+            "Mitarbeit": null,
+            "Sozialverhalten": 0.3,
+            "Aktivitaetsniveau": 0.2,
+            "Lernhaltung": null,
+            "Aufmerksamkeit": null,
+            "Selbststaendigkeit": null
+          },
+          "reason": "'Zufriedenstellend' (satisfactory) Verhalten for Sozialverhalten, on the lower side. Implies mostly positive Aktivitätsniveau."
+        },
+        {
+          "code": "a214a",
+          "text": "[Er/Sie] war lebhaft, verhielt sich aber meist ordentlich.",
+          "weights": {
+            "Mitarbeit": null,
+            "Sozialverhalten": 0.2,
+            "Aktivitaetsniveau": -0.2,
+            "Lernhaltung": null,
+            "Aufmerksamkeit": -0.1,
+            "Selbststaendigkeit": null
+          },
+          "reason": "'Lebhaft' impacts Aktivitätsniveau (not calm). 'Meist ordentlich' keeps Sozialverhalten barely positive. Slight negative on Aufmerksamkeit."
+        },
+        {
+          "code": "a214b",
+          "text": "Das Verhalten war im Allgemeinen ordentlich und anständig.",
+          "weights": {
+            "Mitarbeit": null,
+            "Sozialverhalten": 0.4,
+            "Aktivitaetsniveau": 0.3,
+            "Lernhaltung": null,
+            "Aufmerksamkeit": null,
+            "Selbststaendigkeit": null
+          },
+          "reason": "'Im Allgemeinen ordentlich und anständig' (generally orderly and decent) for Sozialverhalten. Supports positive Aktivitätsniveau."
+        },
+        {
+          "code": "a214c",
+          "text": "Das Verhalten war ordnungsgemäß.",
+          "weights": {
+            "Mitarbeit": null,
+            "Sozialverhalten": 0.4,
+            "Aktivitaetsniveau": 0.3,
+            "Lernhaltung": null,
+            "Aufmerksamkeit": null,
+            "Selbststaendigkeit": null
+          },
+          "reason": "'Ordnungsgemäß' (proper/orderly) Verhalten for Sozialverhalten. Supports positive Aktivitätsniveau."
+        }
+      ]
+    },
+    "5": {
+      "comments": [
+        {
+          "code": "a215",
+          "text": "Das Verhalten war nicht immer einwandfrei.",
+          "weights": {
+            "Mitarbeit": null,
+            "Sozialverhalten": -0.5,
+            "Aktivitaetsniveau": -0.3,
+            "Lernhaltung": null,
+            "Aufmerksamkeit": -0.2,
+            "Selbststaendigkeit": null
+          },
+          "reason": "'Nicht immer einwandfrei' (not always unobjectionable) clearly negative for Sozialverhalten. Implies some negative Aktivitätsniveau and Aufmerksamkeit."
+        },
+        {
+          "code": "a215a",
+          "text": "Das Verhalten musste wiederholt beanstandet werden.",
+          "weights": {
+            "Mitarbeit": -0.1,
+            "Sozialverhalten": -0.8,
+            "Aktivitaetsniveau": -0.6,
+            "Lernhaltung": null,
+            "Aufmerksamkeit": -0.5,
+            "Selbststaendigkeit": null
+          },
+          "reason": "'Wiederholt beanstandet' (repeatedly criticized) is strong negative for Sozialverhalten. Implies negative Aktivitätsniveau and Aufmerksamkeit. Minor impact on Mitarbeit."
+        },
+        {
+          "code": "a215b",
+          "text": "[Er/Sie] ließ sich leicht ablenken und störte den Unterricht.",
+          "weights": {
+            "Mitarbeit": -0.4,
+            "Sozialverhalten": -0.9,
+            "Aktivitaetsniveau": -0.9,
+            "Lernhaltung": null,
+            "Aufmerksamkeit": -0.9,
+            "Selbststaendigkeit": null
+          },
+          "reason": "'Leicht ablenken' (Aufmerksamkeit) and 'störte den Unterricht' (Sozialverhalten, Aktivitätsniveau) are strong negatives. Impacts Mitarbeit."
+        },
+        {
+          "code": "a215c",
+          "text": "[Er/Sie] war sehr unruhig und musste des Öfteren ermahnt werden.",
+          "weights": {
+            "Mitarbeit": -0.2,
+            "Sozialverhalten": -0.7,
+            "Aktivitaetsniveau": -1.0,
+            "Lernhaltung": null,
+            "Aufmerksamkeit": -0.6,
+            "Selbststaendigkeit": null
+          },
+          "reason": "'Sehr unruhig' is max negative for Aktivitätsniveau. 'Musste ermahnt werden' means negative Sozialverhalten. Impacts Aufmerksamkeit and Mitarbeit."
+        }
+      ]
+    },
+    "6": {
+      "comments": [
+        {
+          "code": "a216",
+          "text": "Das Verhalten war unangemessen.",
+          "weights": {
+            "Mitarbeit": -0.3,
+            "Sozialverhalten": -1.0,
+            "Aktivitaetsniveau": -0.8,
+            "Lernhaltung": null,
+            "Aufmerksamkeit": -0.7,
+            "Selbststaendigkeit": null
+          },
+          "reason": "'Unangemessen' (inappropriate) Verhalten is max negative for Sozialverhalten. Strongly implies negative Aktivitätsniveau and Aufmerksamkeit. Impacts Mitarbeit."
+        }
+      ]
+    }
+  },
+  "Aufforderung_und_Hinweise": {
+    "datum": "2025-05-20",
+    "other": {
+      "comments": [
+        {
+          "code": "a230",
+          "text": "Mehr häuslicher Fleiß ist dringend erforderlich.",
+          "weights": {
+            "Mitarbeit": -0.2,
+            "Sozialverhalten": null,
+            "Aktivitaetsniveau": null,
+            "Lernhaltung": -0.9,
+            "Aufmerksamkeit": null,
+            "Selbststaendigkeit": -0.3
+          },
+          "reason": "'Mehr häuslicher Fleiß erforderlich' points to current lack, strong negative for Lernhaltung. Minor impact on Mitarbeit and Selbstständigkeit."
+        },
+        {
+          "code": "a231",
+          "text": "Durch größeren Fleiß könnten bessere Leistungen erzielt werden.",
+          "weights": {
+            "Mitarbeit": -0.1,
+            "Sozialverhalten": null,
+            "Aktivitaetsniveau": null,
+            "Lernhaltung": -0.7,
+            "Aufmerksamkeit": null,
+            "Selbststaendigkeit": -0.2
+          },
+          "reason": "Suggestion for 'größeren Fleiß' implies current deficit, negative for Lernhaltung. Minor impact on Mitarbeit and Selbstständigkeit."
+        }
+      ]
+    }
+  },
+  "Fachliche_und_kognitive_Kompetenz": {
+    "datum": "2025-05-20",
+    "other": {
+      "comments": [
+        {
+          "code": "a250",
+          "text": "[Der Schüler/Die Schülerin] bereicherte den Unterricht durch [seine/ihre] fundierten Beiträge.",
+          "weights": {
+            "Mitarbeit": 0.8,
+            "Sozialverhalten": 0.2,
+            "Aktivitaetsniveau": null,
+            "Lernhaltung": 0.4,
+            "Aufmerksamkeit": 0.5,
+            "Selbststaendigkeit": 0.6
+          },
+          "reason": "'Fundierte Beiträge bereicherten Unterricht' is strong positive for Mitarbeit. Implies good Selbstständigkeit, Aufmerksamkeit, and Lernhaltung. Minor positive Sozialverhalten."
+        },
+        {
+          "code": "a251",
+          "text": "[Der Schüler/Die Schülerin] verfügte über die Fähigkeit zu analytischem Denken.",
+          "weights": {
+            "Mitarbeit": null,
+            "Sozialverhalten": null,
+            "Aktivitaetsniveau": null,
+            "Lernhaltung": null,
+            "Aufmerksamkeit": 0.2,
+            "Selbststaendigkeit": 0.5
+          },
+          "reason": "'Fähigkeit zu analytischem Denken' is a cognitive skill, positive for Selbstständigkeit. Minor implication for Aufmerksamkeit."
+        },
+        {
+          "code": "a252",
+          "text": "[Der Schüler/Die Schülerin] verfügte über die Fähigkeit, in komplexen Zusammenhängen zu denken.",
+          "weights": {
+            "Mitarbeit": null,
+            "Sozialverhalten": null,
+            "Aktivitaetsniveau": null,
+            "Lernhaltung": null,
+            "Aufmerksamkeit": 0.3,
+            "Selbststaendigkeit": 0.6
+          },
+          "reason": "'Fähigkeit, in komplexen Zusammenhängen zu denken' is a cognitive skill, positive for Selbstständigkeit. Implies Aufmerksamkeit."
+        },
+        {
+          "code": "a253",
+          "text": "[Der Schüler/Die Schülerin] konnte gut analysieren und überzeugte durch eine sehr genaue Arbeitsweise.",
+          "weights": {
+            "Mitarbeit": 0.2,
+            "Sozialverhalten": null,
+            "Aktivitaetsniveau": null,
+            "Lernhaltung": 0.5,
+            "Aufmerksamkeit": 0.4,
+            "Selbststaendigkeit": 0.6
+          },
+          "reason": "'Gut analysieren' and 'sehr genaue Arbeitsweise' point to Selbstständigkeit, Lernhaltung (diligence), and Aufmerksamkeit. Minor positive for Mitarbeit if work is shared."
+        },
+        {
+          "code": "a254",
+          "text": "[Der Schüler/Die Schülerin] verfügte stets über sehr gute Fähigkeiten, sich vertiefte berufliche Kenntnisse anzueignen.",
+          "weights": {
+            "Mitarbeit": null,
+            "Sozialverhalten": null,
+            "Aktivitaetsniveau": null,
+            "Lernhaltung": 0.3,
+            "Aufmerksamkeit": 0.2,
+            "Selbststaendigkeit": 0.7
+          },
+          "reason": "'Sehr gute Fähigkeiten, sich Kenntnisse anzueignen' highlights Selbstständigkeit in learning. Implies some positive Lernhaltung and Aufmerksamkeit."
+        },
+        {
+          "code": "a255",
+          "text": "[Der Schüler/Die Schülerin] verfügte im Erschließen von Informationen über einen hohen Grad an Selbstständigkeit.",
+          "weights": {
+            "Mitarbeit": null,
+            "Sozialverhalten": null,
+            "Aktivitaetsniveau": null,
+            "Lernhaltung": 0.3,
+            "Aufmerksamkeit": 0.2,
+            "Selbststaendigkeit": 0.9
+          },
+          "reason": "Directly states 'hohen Grad an Selbstständigkeit' in information gathering. Implies some positive Lernhaltung and Aufmerksamkeit."
+        },
+        {
+          "code": "a256",
+          "text": "[Der Schüler/Die Schülerin] konnte mehrere Wissensgebiete erfolgreich miteinander verknüpfen.",
+          "weights": {
+            "Mitarbeit": null,
+            "Sozialverhalten": null,
+            "Aktivitaetsniveau": null,
+            "Lernhaltung": null,
+            "Aufmerksamkeit": 0.3,
+            "Selbststaendigkeit": 0.6
+          },
+          "reason": "'Wissensgebiete verknüpfen' is a cognitive skill, positive for Selbstständigkeit. Implies Aufmerksamkeit."
+        },
+        {
+          "code": "a257",
+          "text": "[Der Schüler/Die Schülerin] konnte [seine/ihre] Ausdrucksweise der Situation entsprechend anpassen.",
+          "weights": {
+            "Mitarbeit": 0.1,
+            "Sozialverhalten": 0.5,
+            "Aktivitaetsniveau": null,
+            "Lernhaltung": null,
+            "Aufmerksamkeit": 0.1,
+            "Selbststaendigkeit": 0.2
+          },
+          "reason": "'Ausdrucksweise anpassen' is a key social skill (Sozialverhalten). Minor positive for Selbstständigkeit, Mitarbeit, Aufmerksamkeit."
+        },
+        {
+          "code": "a258",
+          "text": "[Der Schüler/Die Schülerin] verfügte stets über sehr gute Fähigkeiten, eine Problemlösung zu planen, durchzuführen und die Ergebnisse kritisch zu bewerten.",
+          "weights": {
+            "Mitarbeit": 0.2,
+            "Sozialverhalten": null,
+            "Aktivitaetsniveau": null,
+            "Lernhaltung": 0.4,
+            "Aufmerksamkeit": 0.4,
+            "Selbststaendigkeit": 0.8
+          },
+          "reason": "Full problem-solving skill set ('planen, durchführen, bewerten') strongly indicates Selbstständigkeit. Implies positive Lernhaltung and Aufmerksamkeit. Minor for Mitarbeit if applied in class."
+        }
+      ]
+    }
+  },
+  "Soziale_Kompetenz": {
+    "datum": "2025-05-20",
+    "other": {
+      "comments": [
+        {
+          "code": "a260",
+          "text": "[Er/Sie] zeigte eine bemerkenswerte Sozialkompetenz.",
+          "weights": {
+            "Mitarbeit": 0.3,
+            "Sozialverhalten": 0.9,
+            "Aktivitaetsniveau": 0.5,
+            "Lernhaltung": null,
+            "Aufmerksamkeit": null,
+            "Selbststaendigkeit": null
+          },
+          "reason": "'Bemerkenswerte Sozialkompetenz' is high for Sozialverhalten. Implies positive Aktivitätsniveau and aids Mitarbeit."
+        },
+        {
+          "code": "a261",
+          "text": "[Er/Sie] war stets bereit, mit anderen konstruktiv in der Gruppe zusammenzuarbeiten.",
+          "weights": {
+            "Mitarbeit": 0.8,
+            "Sozialverhalten": 0.8,
+            "Aktivitaetsniveau": 0.2,
+            "Lernhaltung": null,
+            "Aufmerksamkeit": null,
+            "Selbststaendigkeit": null
+          },
+          "reason": "'Bereit, konstruktiv in Gruppe zusammenzuarbeiten' is strong for Mitarbeit and Sozialverhalten. Implies positive Aktivitätsniveau."
+        },
+        {
+          "code": "a262",
+          "text": "[Er/Sie] verfügte über hohe Teamfähigkeit und überdurchschnittliche Leistungsbereitschaft.",
+          "weights": {
+            "Mitarbeit": 0.7,
+            "Sozialverhalten": 0.7,
+            "Aktivitaetsniveau": 0.2,
+            "Lernhaltung": 0.6,
+            "Aufmerksamkeit": null,
+            "Selbststaendigkeit": null
+          },
+          "reason": "'Hohe Teamfähigkeit' for Mitarbeit and Sozialverhalten. 'Überdurchschnittliche Leistungsbereitschaft' for Lernhaltung. Implies positive Aktivitätsniveau."
+        },
+        {
+          "code": "a263",
+          "text": "[Er/Sie] erfreute durch [seinen/ihren] positiven Einfluss auf das Klassenklima.",
+          "weights": {
+            "Mitarbeit": 0.1,
+            "Sozialverhalten": 0.9,
+            "Aktivitaetsniveau": 0.5,
+            "Lernhaltung": null,
+            "Aufmerksamkeit": null,
+            "Selbststaendigkeit": null
+          },
+          "reason": "'Positiven Einfluss auf Klassenklima' is very high for Sozialverhalten. Implies positive Aktivitätsniveau. Minor positive for Mitarbeit."
+        },
+        {
+          "code": "a264",
+          "text": "[Er/Sie] war bereit und fähig, Verantwortung für Ausführung und Ergebnis der übertragenen Aufgabe zu übernehmen.",
+          "weights": {
+            "Mitarbeit": 0.3,
+            "Sozialverhalten": 0.1,
+            "Aktivitaetsniveau": null,
+            "Lernhaltung": 0.5,
+            "Aufmerksamkeit": null,
+            "Selbststaendigkeit": 0.8
+          },
+          "reason": "'Verantwortung übernehmen' is strong for Selbstständigkeit and positive for Lernhaltung. Also relevant for Mitarbeit and slightly for Sozialverhalten."
+        },
+        {
+          "code": "a265",
+          "text": "[Er/Sie] zeigte stets sehr gute Fähigkeiten, mit anderen gemeinsam und erfolgreich in einem Team zu arbeiten.",
+          "weights": {
+            "Mitarbeit": 0.9,
+            "Sozialverhalten": 0.8,
+            "Aktivitaetsniveau": 0.2,
+            "Lernhaltung": null,
+            "Aufmerksamkeit": null,
+            "Selbststaendigkeit": null
+          },
+          "reason": "'Sehr gute Fähigkeiten, gemeinsam im Team zu arbeiten' is very strong for Mitarbeit and Sozialverhalten. Implies positive Aktivitätsniveau."
+        },
+        {
+          "code": "a266",
+          "text": "[Er/Sie] bewies sozial verantwortungsvolles und hilfsbereites Verhalten.",
+          "weights": {
+            "Mitarbeit": 0.2,
+            "Sozialverhalten": 0.9,
+            "Aktivitaetsniveau": 0.4,
+            "Lernhaltung": null,
+            "Aufmerksamkeit": null,
+            "Selbststaendigkeit": 0.3
+          },
+          "reason": "'Sozial verantwortungsvolles und hilfsbereites Verhalten' is high for Sozialverhalten. Implies positive Aktivitätsniveau and some Selbstständigkeit."
+        },
+        {
+          "code": "a267",
+          "text": "[Er/Sie] bewies in der Klassengemeinschaft integrative Fähigkeiten und engagierte sich für ein gutes Sozialklima in der Klasse.",
+          "weights": {
+            "Mitarbeit": 0.3,
+            "Sozialverhalten": 1.0,
+            "Aktivitaetsniveau": 0.5,
+            "Lernhaltung": null,
+            "Aufmerksamkeit": null,
+            "Selbststaendigkeit": 0.2
+          },
+          "reason": "'Integrative Fähigkeiten' and 'Engagement für Sozialklima' is max for Sozialverhalten. Positive for Aktivitätsniveau, Mitarbeit, and some Selbstständigkeit."
+        },
+        {
+          "code": "a268",
+          "text": "[Er/Sie] war in der Lage, auf Schwierigkeiten anderer Klassenmitglieder im Lernprozess einzugehen und ihnen Hilfestellung zu leisten.",
+          "weights": {
+            "Mitarbeit": 0.4,
+            "Sozialverhalten": 0.9,
+            "Aktivitaetsniveau": 0.3,
+            "Lernhaltung": 0.1,
+            "Aufmerksamkeit": null,
+            "Selbststaendigkeit": 0.2
+          },
+          "reason": "'Hilfestellung für andere leisten' is very high for Sozialverhalten. Positive for Mitarbeit, Aktivitätsniveau, and some Selbstständigkeit."
+        }
+      ]
+    }
+  },
+  "Lernverhalten_Lernkompetenz": {
+    "datum": "2025-05-20",
+    "other": {
+      "comments": [
+        {
+          "code": "a270",
+          "text": "[Der Schüler/Die Schülerin] überzeugte durch Fleiß und großen Arbeitseinsatz.",
+          "weights": {
+            "Mitarbeit": 0.4,
+            "Sozialverhalten": null,
+            "Aktivitaetsniveau": null,
+            "Lernhaltung": 1.0,
+            "Aufmerksamkeit": 0.5,
+            "Selbststaendigkeit": 0.3
+          },
+          "reason": "'Fleiß und großer Arbeitseinsatz' is max for Lernhaltung. Positively impacts Mitarbeit and implies Aufmerksamkeit and some Selbstständigkeit."
+        },
+        {
+          "code": "a271",
+          "text": "[Der Schüler/Die Schülerin] zeichnete sich durch [seine/ihre] zielstrebige Arbeitsweise aus.",
+          "weights": {
+            "Mitarbeit": 0.3,
+            "Sozialverhalten": null,
+            "Aktivitaetsniveau": null,
+            "Lernhaltung": 0.9,
+            "Aufmerksamkeit": 0.7,
+            "Selbststaendigkeit": 0.6
+          },
+          "reason": "'Zielstrebige Arbeitsweise' is strong for Lernhaltung and Selbstständigkeit, and implies good Aufmerksamkeit. Benefits Mitarbeit."
+        },
+        {
+          "code": "a272",
+          "text": "[Der Schüler/Die Schülerin] zeigte im Unterricht überdurchschnittliche Lernbereitschaft.",
+          "weights": {
+            "Mitarbeit": 0.5,
+            "Sozialverhalten": null,
+            "Aktivitaetsniveau": null,
+            "Lernhaltung": 0.8,
+            "Aufmerksamkeit": 0.6,
+            "Selbststaendigkeit": null
+          },
+          "reason": "'Überdurchschnittliche Lernbereitschaft' is strong for Lernhaltung and Aufmerksamkeit. Positively impacts Mitarbeit."
+        },
+        {
+          "code": "a273",
+          "text": "[Der Schüler/Die Schülerin] zeigte überdurchschnittliche Lernbereitschaft.",
+          "weights": {
+            "Mitarbeit": 0.5,
+            "Sozialverhalten": null,
+            "Aktivitaetsniveau": null,
+            "Lernhaltung": 0.8,
+            "Aufmerksamkeit": 0.6,
+            "Selbststaendigkeit": null
+          },
+          "reason": "Identical to a272. Strong for Lernhaltung and Aufmerksamkeit. Positively impacts Mitarbeit."
+        },
+        {
+          "code": "a274",
+          "text": "Die Fähigkeit und Bereitschaft, Aufgaben selbstständig und zielorientiert zu bearbeiten sowie das Ergebnis zu präsentieren, sind sehr gut ausgeprägt.",
+          "weights": {
+            "Mitarbeit": 0.5,
+            "Sozialverhalten": null,
+            "Aktivitaetsniveau": null,
+            "Lernhaltung": 0.9,
+            "Aufmerksamkeit": 0.7,
+            "Selbststaendigkeit": 0.9
+          },
+          "reason": "Comprehensive positive statement. 'Selbstständig' for Selbstständigkeit, 'zielorientiert' and 'Bereitschaft' for Lernhaltung and Aufmerksamkeit. 'Präsentieren' for Mitarbeit."
+        },
+        {
+          "code": "a275",
+          "text": "[Der Schüler/Die Schülerin] überzeugte durch selbstständiges Arbeiten.",
+          "weights": {
+            "Mitarbeit": 0.1,
+            "Sozialverhalten": null,
+            "Aktivitaetsniveau": null,
+            "Lernhaltung": 0.4,
+            "Aufmerksamkeit": 0.3,
+            "Selbststaendigkeit": 1.0
+          },
+          "reason": "'Selbstständiges Arbeiten' is max for Selbstständigkeit. Implies some positive Lernhaltung and Aufmerksamkeit. Minor positive for Mitarbeit."
+        }
+      ]
+    }
+  }
+};
+            console.log('Daten erfolgreich geladen:', studentAssessmentData);
+            initializeTraitInputs();
+        }
+
+        // Function to initialize trait inputs (sliders)
+        function initializeTraitInputs() {
+            const traitsContainer = document.getElementById('traitsContainer');
+            traitsContainer.innerHTML = ''; // Clear previous inputs
+
+            const allPossibleTraits = new Set();
+
+            // Collect all unique trait keys from the entire dataset
+            for (const categoryKey in studentAssessmentData) {
+                const category = studentAssessmentData[categoryKey];
+                for (const gradeKey in category) {
+                    if (gradeKey !== 'datum') { // Skip 'datum' field
+                        const grade = category[gradeKey];
+                        grade.comments.forEach(comment => {
+                            for (const trait in comment.weights) {
+                                allPossibleTraits.add(trait);
+                            }
+                        });
+                    }
+                }
+            }
+
+            console.log('Anzahl der gefundenen Eigenschaften:', allPossibleTraits.size);
+            console.log('Gefundene Eigenschaften:', Array.from(allPossibleTraits));
+
+            const sortedTraits = Array.from(allPossibleTraits).sort();
+
+            if (sortedTraits.length === 0) {
+                traitsContainer.innerHTML = '<p class="text-gray-600 text-center">Keine Charaktereigenschaften in den Daten gefunden.</p>';
+                return;
+            }
+
+            sortedTraits.forEach(trait => {
+                const traitId = trait.replace(/[^a-zA-Z0-9]/g, '_'); // Sanitize trait name for ID
+
+                const div = document.createElement('div');
+                div.className = 'flex flex-col';
+
+                const label = document.createElement('label');
+                label.htmlFor = traitId;
+                label.className = `block text-sm font-semibold mb-2 label-${traitId}`; // Add class for color
+                label.textContent = trait.replace(/_/g, ' '); // Display trait name nicely
+
+                const sliderDiv = document.createElement('div');
+                sliderDiv.className = 'slider-container flex items-center mb-2'; // Added mb-2 for spacing
+
+                const slider = document.createElement('input');
+                slider.type = 'range';
+                slider.id = traitId; // Use sanitized trait name as ID
+                slider.min = -10; // Corresponds to -1.0
+                slider.max = 10;  // Corresponds to 1.0
+                slider.value = 0; // Corresponds to 0.0 (neutral)
+                slider.step = 1;  // Corresponds to 0.1 increments
+                slider.className = 'slider flex-grow mr-3 neutral'; // Initial class for neutral color
+
+                const valueDisplay = document.createElement('span');
+                valueDisplay.id = `${traitId}Value`;
+                valueDisplay.className = 'text-gray-600 text-sm w-10 text-right';
+                valueDisplay.textContent = (slider.value / 10).toFixed(1); // Display initial value
+
+                const descriptionDisplay = document.createElement('span');
+                descriptionDisplay.id = `${traitId}Description`;
+                descriptionDisplay.className = 'text-gray-500 text-xs mt-1 w-full text-center'; // Text below slider
+                descriptionDisplay.textContent = traitDescriptions[trait] ? traitDescriptions[trait]["0.0"] : '';
+
+                slider.oninput = function() {
+                    const currentValue = parseFloat(this.value) / 10;
+                    valueDisplay.textContent = currentValue.toFixed(1);
+
+                    // Update slider color based on value
+                    this.classList.remove('negative', 'neutral', 'positive');
+                    if (currentValue < 0) {
+                        this.classList.add('negative');
+                    } else if (currentValue > 0) {
+                        this.classList.add('positive');
+                    } else {
+                        this.classList.add('neutral');
+                    }
+
+                    // Update description
+                    if (traitDescriptions[trait]) {
+                        if (currentValue < 0) {
+                            descriptionDisplay.textContent = traitDescriptions[trait]["-1.0"];
+                        } else if (currentValue > 0) {
+                            descriptionDisplay.textContent = traitDescriptions[trait]["1.0"];
+                        } else {
+                            descriptionDisplay.textContent = traitDescriptions[trait]["0.0"];
+                        }
+                    }
+                };
+                // Initial color and description update
+                slider.oninput();
+
+
+                sliderDiv.appendChild(slider);
+                sliderDiv.appendChild(valueDisplay);
+
+                div.appendChild(label);
+                div.appendChild(sliderDiv);
+                div.appendChild(descriptionDisplay); // Append description below slider
+                traitsContainer.appendChild(div);
+            });
+        }
+
+        // Event Listeners
+        document.addEventListener('DOMContentLoaded', loadJsonData);
+
+        document.getElementById('genderMale').addEventListener('click', function() {
+            this.classList.add('active');
+            document.getElementById('genderFemale').classList.remove('active');
+        });
+
+        document.getElementById('genderFemale').addEventListener('click', function() {
+            this.classList.add('active');
+            document.getElementById('genderMale').classList.remove('active');
+        });
+
+        document.getElementById('generateSuggestions').addEventListener('click', generateSuggestions);
+        document.getElementById('showSavedTexts').addEventListener('click', showSavedTextsModal);
+
+        // Modal close button
+        document.querySelector('#savedTextsModal .close-button').addEventListener('click', function() {
+            document.getElementById('savedTextsModal').style.display = 'none';
+        });
+
+        // Close modal if user clicks outside of it
+        window.addEventListener('click', function(event) {
+            const modal = document.getElementById('savedTextsModal');
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        });
+
+
+        // Function to get user input for traits
+        function getUserTraitInputs() {
+            const userTraits = {};
+            const traitsContainer = document.getElementById('traitsContainer');
+            const allSliderInputs = traitsContainer.querySelectorAll('input[type="range"]');
+
+            allSliderInputs.forEach(input => {
+                // input.id is already the sanitized trait name (e.g., "Freundlich_Hilfsbereit")
+                const traitName = input.id;
+                userTraits[traitName] = parseFloat(input.value) / 10; // Convert slider value to -1.0 to 1.0 range
+            });
+            return userTraits;
+        }
+
+        // Function to calculate similarity between user input and comment weights
+        function calculateSimilarity(userTraits, commentWeights) {
+            const root = 4;
+            let sumOfSqrtDifferences = 0;
+            let count = 0; // Number of common traits with valid weights
+            let countUserTraitsConsidered = 0; // Total traits from user input iterated
+
+            for (const trait in userTraits) {
+                countUserTraitsConsidered++;
+                // Only consider traits that are present in comment weights and have a non-null weight
+                if (commentWeights.hasOwnProperty(trait) && commentWeights[trait] !== null) {
+                    const userValue = userTraits[trait]; // Already a number
+                    const commentValue = commentWeights[trait];
+
+                    const diff = Math.abs(userValue - commentValue);
+                    sumOfSqrtDifferences += Math.pow(diff, 1/root);  // Math.sqrt(diff);
+                    count++;
+                }
+            }
+
+            if (count === 0) {
+                return 0; // No common, validly weighted traits
+            }
+
+            const averageSqrtDiff = sumOfSqrtDifferences / count;
+            const maxSingleTraitSqrtDiff = Math.pow(2, 1/root);  // Math.sqrt(2); // Max possible sqrt(abs(diff)) for one trait range -1 to 1 maps to diff 0 to 2
+
+            // Factor to consider how many of the comment's available traits were matched by the user's significant inputs
+            // This interpretation of matchingAttributesFactor is slightly different now:
+            // It emphasizes how many of the *comment's specified traits* were actually relevant to the user's non-neutral settings,
+            // or simply how many traits are shared.
+            // A simpler approach: "How many of the traits the user has *actually set* (non-zero) are matched in the comment?"
+            // For now, let's use a factor based on the proportion of common traits to all traits the user *could* set.
+            // This means if a comment only defines a few traits, and the user set many, it might be less relevant.
+            /*let relevantUserTraits = 0;
+            for(const trait in userTraits){
+                if(userTraits[trait] !== 0.0) relevantUserTraits++; //Count traits user actively set away from neutral
+            }*/
+
+
+            // A high number of traits in `userTraits` that are *not* in `commentWeights` (or are null there)
+            // means the comment is less specific to the user's detailed input.
+            // count = common traits between user and comment (where comment weight is not null)
+            // countUserTraitsConsidered = all traits available in UI (sliders)
+
+            // Penalize if the comment doesn't have weights for many of the UI traits
+            const matchingAttributesFactor = Math.sqrt(count / countUserTraitsConsidered);
+
+
+            // Invert the normalized average difference to get a similarity score (higher is better)
+            let similarity = (maxSingleTraitSqrtDiff - averageSqrtDiff) / maxSingleTraitSqrtDiff;
+            similarity = Math.max(0, similarity); // Ensure similarity is not negative
+
+            return similarity * matchingAttributesFactor;
+        }
+
+        // Function to generate suggestions
+        function generateSuggestions() {
+            if (!studentAssessmentData) {
+                console.error('Daten sind noch nicht geladen.');
+                displayMessage('Daten sind noch nicht geladen. Bitte warten Sie einen Moment oder laden Sie die Seite neu.', 'error');
+                return;
+            }
+
+            const lastName = document.getElementById('lastName').value.trim();
+            const isMale = document.getElementById('genderMale').classList.contains('active');
+            const userTraits = getUserTraitInputs();
+
+            if (!lastName) {
+                displayMessage('Bitte geben Sie den Nachnamen des Schülers/der Schülerin ein.', 'error');
+                return;
+            }
+
+            displayMessage(''); // Clear previous messages
+
+            const categorizedComments = {};
+            for (const categoryKey in studentAssessmentData) {
+                if (categoryKey !== 'datum') { // Skip 'datum' field
+                    categorizedComments[categoryKey] = [];
+                    const category = studentAssessmentData[categoryKey];
+                    for (const gradeKey in category) {
+                        if (gradeKey !== 'datum') {
+                            const grade = category[gradeKey];
+                            grade.comments.forEach(comment => {
+                                categorizedComments[categoryKey].push({
+                                    comment: comment,
+                                    category: categoryKey // Store the category
+                                });
+                            });
+                        }
+                    }
+                }
+            }
+
+            let combinedTopSuggestions = [];
+
+            for (const categoryKey in categorizedComments) {
+                const commentsInCategory = categorizedComments[categoryKey];
+                const scoredCommentsInCategory = commentsInCategory.map(item => {
+                    const similarity = calculateSimilarity(userTraits, item.comment.weights);
+                    return {
+                        comment: item.comment,
+                        similarity: similarity,
+                        userTraitsSnapshot: { ...userTraits }, // Keep a snapshot for display
+                        category: item.category // Pass category along
+                    };
+                });
+
+                scoredCommentsInCategory.sort((a, b) => b.similarity - a.similarity);
+
+                // Take at least MIN_SUGGESTIONS_PER_CATEGORY from each category
+                const topNFromCategory = scoredCommentsInCategory.slice(0, MIN_SUGGESTIONS_PER_CATEGORY);
+                combinedTopSuggestions = combinedTopSuggestions.concat(topNFromCategory);
+            }
+
+            // Sort all collected suggestions globally by similarity
+            combinedTopSuggestions.sort((a, b) => b.similarity - a.similarity);
+
+            // Get overall top 10 (or fewer if not enough unique suggestions)
+            const finalTopSuggestions = [];
+            const uniqueTexts = new Set();
+
+            for (const suggestion of combinedTopSuggestions) {
+                if (finalTopSuggestions.length >= 10) break;
+                if (!uniqueTexts.has(suggestion.comment.text)) {
+                    finalTopSuggestions.push(suggestion);
+                    uniqueTexts.add(suggestion.comment.text);
+                }
+            }
+
+            displayResults(finalTopSuggestions, lastName, isMale);
+        }
+
+        // Function to display results
+        function displayResults(suggestions, lastName, isMale) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = ''; // Clear previous results
+
+            if (suggestions.length === 0) {
+                resultsDiv.innerHTML = '<p class="text-gray-600 text-center">Keine passenden Vorschläge gefunden.</p>';
+                return;
+            }
+
+            const genderPronounSubject = isMale ? 'er' : 'sie';
+            const genderPronounPossessive = isMale ? 'sein' : 'ihr';
+            const genderSalutation = isMale ? 'Herr' : 'Frau';
+            const colorIndicesSet = new Set([]);
+
+            suggestions.forEach((item, index) => {
+                colorIndicesSet.add(item.category);
+            });
+            const colorIndices = Array.from(colorIndicesSet).sort();
+            delete colorIndicesSet;
+
+            suggestions.forEach((item, index) => {
+                let adaptedText = item.comment.text;
+
+                adaptedText = adaptedText.replace(/\[Er\/Sie\]/g, genderPronounSubject.charAt(0).toUpperCase() + genderPronounSubject.slice(1));
+                adaptedText = adaptedText.replace(/\[Seine\/Ihre\]/g, genderPronounPossessive.charAt(0).toUpperCase() + genderPronounPossessive.slice(1) + 'e');
+                adaptedText = adaptedText.replace(/\[Sein\/Ihr\]/g, genderPronounPossessive.charAt(0).toUpperCase() + genderPronounPossessive.slice(1));
+                adaptedText = adaptedText.replace(/\[seinen\/ihren\]/g, genderPronounPossessive + 'en');
+                adaptedText = adaptedText.replace(/\[ihm\/ihr\]/g, isMale ? 'ihm' : 'ihr');
+                adaptedText = adaptedText.replace(/\[Der Schüler\/Die Schülerin\]/g, isMale ? 'Der Schüler' : 'Die Schülerin');
+                adaptedText = adaptedText.replace(/\[Schüler\/Schülerin\]/g, `${genderSalutation} ${lastName}`);
+                adaptedText = adaptedText.replace(/Der Schüler/g, `${genderSalutation} ${lastName}`);
+                adaptedText = adaptedText.replace(/der Schüler/g, `${genderSalutation} ${lastName}`);
+                adaptedText = adaptedText.replace(/\bEr\b/g, genderPronounSubject.charAt(0).toUpperCase() + genderPronounSubject.slice(1));
+                adaptedText = adaptedText.replace(/\ber\b/g, genderPronounSubject);
+                adaptedText = adaptedText.replace(/\bIhm\b/g, isMale ? 'Ihm' : 'Ihr');
+                adaptedText = adaptedText.replace(/\bihm\b/g, isMale ? 'ihm' : 'ihr');
+                adaptedText = adaptedText.replace(/\[sein\/ihr\]/g, genderPronounPossessive);
+                adaptedText = adaptedText.replace(/\[seine\/ihre\]/g, genderPronounPossessive + 'e');
+                adaptedText = adaptedText.replace(/\bSeine\b/g, genderPronounPossessive.charAt(0).toUpperCase() + genderPronounPossessive.slice(1) + 'e');
+                adaptedText = adaptedText.replace(/\bseine\b/g, genderPronounPossessive + 'e');
+                adaptedText = adaptedText.replace(/\bSeiner\b/g, genderPronounPossessive.charAt(0).toUpperCase() + genderPronounPossessive.slice(1) + 'er');
+                adaptedText = adaptedText.replace(/\bseiner\b/g, genderPronounPossessive + 'er');
+                adaptedText = adaptedText.replace(/\bSein\b/g, genderPronounPossessive.charAt(0).toUpperCase() + genderPronounPossessive.slice(1));
+                adaptedText = adaptedText.replace(/\bsein\b/g, genderPronounPossessive);
+
+                const resultBox = document.createElement('div');
+                resultBox.className = 'result-box p-3 rounded-lg shadow-sm';
+                resultBox.innerHTML = `
+                    <div class="suggestion-header">
+                        <h3 class="text-lg font-semibold text-gray-800">Vorschlag ${index + 1} (Ähnlichkeit: ${(item.similarity * 100).toFixed(2)}%)</h3>
+                        <span class="category-label category-color-${colorIndices.indexOf(item.category)}">${item.category.charAt(0).toUpperCase() + item.category.slice(1)}</span>
+                    </div>
+                    <div class="suggestion-text-and-button">
+                        <p class="text-gray-700 text-base suggestion-text">${adaptedText}</p>
+                        <button class="save-button bg-green-500 hover:bg-green-600 text-white text-sm font-bold py-1 px-3 rounded-lg flex-shrink-0 transition duration-200 ease-in-out"
+                                data-text="${adaptedText}"
+                                data-original-code="${item.comment.code}"
+                                data-category="${item.category}">
+                            Speichern
+                        </button>
+                    </div>
+                    <div class="trait-stats-container mt-2">
+                        <div class="collapsible-header">
+                            <h4 class="font-semibold text-gray-700 text-sm">Eigenschafts-Vergleich:</h4>
+                            <span class="collapsible-icon transform transition-transform duration-200 ease-in-out">&#9654;</span>
+                        </div>
+                        <div class="collapsible-content p-3 bg-gray-50 rounded-b-lg border border-gray-200 border-t-0 text-xs">
+                            <table class="w-full text-left table-auto">
+                                <thead>
+                                    <tr class="bg-gray-100">
+                                        <th class="p-1">Eigenschaft</th>
+                                        <th class="p-1">Ihre Eingabe</th>
+                                        <th class="p-1">Text-Gewichtung</th>
+                                        <th class="p-1">Einzelbeitrag</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${Object.keys(item.userTraitsSnapshot).map(trait => {
+                                        const userVal = item.userTraitsSnapshot[trait];
+                                        const commentValOrNull = item.comment.weights[trait];
+                                        const commentValDisplay = (commentValOrNull !== undefined && commentValOrNull !== null) ? commentValOrNull.toFixed(1) : 'N/A';
+
+                                        let contribution = 'N/A';
+                                        if (commentValOrNull !== undefined && commentValOrNull !== null && !isNaN(userVal)) {
+                                           const diff = Math.abs(userVal - commentValOrNull);
+                                           // Contribution: 1 is perfect match, 0 is max diff (sqrt(2) away), can be negative if diff > 1.
+                                           // Let's ensure it's capped at 0 for display if it was negative.
+                                           contribution = Math.max(0, (1 - Math.sqrt(diff))).toFixed(2);
+                                        }
+
+                                        return `
+                                            <tr>
+                                                <td class="p-1 border-t border-gray-200">${trait.replace(/_/g, ' ')}</td>
+                                                <td class="p-1 border-t border-gray-200">${userVal.toFixed(1)}</td>
+                                                <td class="p-1 border-t border-gray-200">${commentValDisplay}</td>
+                                                <td class="p-1 border-t border-gray-200">${contribution}</td>
+                                            </tr>
+                                        `;
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+                resultsDiv.appendChild(resultBox);
+
+                const collapsibleHeader = resultBox.querySelector('.collapsible-header');
+                const collapsibleContent = resultBox.querySelector('.collapsible-content');
+                const collapsibleIcon = resultBox.querySelector('.collapsible-icon');
+
+                collapsibleHeader.addEventListener('click', () => {
+                    collapsibleContent.classList.toggle('expanded');
+                    collapsibleIcon.classList.toggle('rotated');
+                });
+            });
+
+            document.querySelectorAll('.save-button').forEach(button => {
+                button.addEventListener('click', function() {
+                    const textToSave = this.dataset.text;
+                    const originalCode = this.dataset.originalCode;
+                    const category = this.dataset.category;
+                    const currentLastName = document.getElementById('lastName').value.trim();
+                    saveAssessment(currentLastName, textToSave, originalCode, category);
+                    displayMessage('Text erfolgreich gespeichert!', 'info');
+                });
+            });
+        }
+
+        function displayMessage(message, type = 'info') {
+            let messageDiv = document.getElementById('appMessage');
+            if (!messageDiv) {
+                messageDiv = document.createElement('div');
+                messageDiv.id = 'appMessage';
+                // Insert after the buttons container for better layout
+                const buttonsContainer = document.querySelector('.flex.flex-col.sm\\:flex-row.gap-4.mb-8');
+                buttonsContainer.insertAdjacentElement('afterend', messageDiv);
+            }
+
+            messageDiv.textContent = message;
+            if (type === 'error') {
+                messageDiv.className = 'my-4 p-3 rounded-lg text-red-700 bg-red-100 border border-red-200 text-center';
+            } else {
+                messageDiv.className = 'my-4 p-3 rounded-lg text-gray-700 bg-gray-100 border border-gray-200 text-center';
+            }
+            if (!message) {
+                messageDiv.style.display = 'none';
+            } else {
+                messageDiv.style.display = 'block';
+            }
+        }
+
+        function getSavedAssessments() {
+            const storedData = localStorage.getItem(LOCAL_STORAGE_KEY);
+            return storedData ? JSON.parse(storedData) : {};
+        }
+
+        function saveAssessment(lastName, text, originalCode, category) {
+            const assessments = getSavedAssessments();
+            if (!assessments[lastName]) {
+                assessments[lastName] = [];
+            }
+            const newItem = { text: text, originalCode: originalCode, category: category, date: new Date().toISOString() };
+            if (!assessments[lastName].some(item => item.originalCode === originalCode)) { // Check against originalCode to avoid duplicates of same base text
+                assessments[lastName].push(newItem);
+                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(assessments));
+            } else {
+                 // Allow saving if text is different, even if original code is same (e.g. adapted differently) - actually, no, stick to original code for simplicity
+                const existingItemIndex = assessments[lastName].findIndex(item => item.originalCode === originalCode);
+                if (existingItemIndex !== -1 && assessments[lastName][existingItemIndex].text !== text) {
+                    // If the text itself is different (e.g. due to different name/gender adaptation) but from same original code
+                    // This case should ideally not happen if originalCode is the unique key for a "base phrase"
+                    // For now, we prevent re-saving if the originalCode matches.
+                    // If a user wants to save a *variation* it.should perhaps be treated differently.
+                    // However, current logic: if originalCode is there, don't add.
+                     displayMessage('Ein Text mit diesem Ursprungscode ist bereits für diesen Schüler gespeichert.', 'info');
+                } else if (existingItemIndex === -1) {
+                    // This case should not be reached due to outer if, but for safety:
+                    assessments[lastName].push(newItem);
+                    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(assessments));
+                } else {
+                     displayMessage('Dieser Text (basierend auf Ursprungscode) ist bereits gespeichert.', 'info');
+                }
+            }
+        }
+
+        function removeAssessment(lastName, originalCodeToRemove) {
+            const assessments = getSavedAssessments();
+            if (assessments[lastName]) {
+                assessments[lastName] = assessments[lastName].filter(item => item.originalCode !== originalCodeToRemove);
+                if (assessments[lastName].length === 0) {
+                    delete assessments[lastName];
+                }
+                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(assessments));
+                displayMessage('Text erfolgreich entfernt.', 'info');
+                showSavedTextsModal(); // Refresh
+            }
+        }
+
+        function showSavedTextsModal() {
+            const modal = document.getElementById('savedTextsModal');
+            const tableContainer = document.getElementById('savedTextsTableContainer');
+            tableContainer.innerHTML = '';
+
+            const assessments = getSavedAssessments();
+            const sortedLastNames = Object.keys(assessments).sort();
+
+            if (sortedLastNames.length === 0) {
+                tableContainer.innerHTML = '<p class="text-gray-600 text-center">Es sind noch keine Beurteilungen gespeichert.</p>';
+                modal.style.display = 'flex';
+                return;
+            }
+
+            const table = document.createElement('table');
+            table.className = 'min-w-full bg-white border border-gray-300 rounded-lg shadow-sm';
+            table.innerHTML = `
+                <thead>
+                    <tr class="bg-gray-100 text-gray-700 uppercase text-sm leading-normal">
+                        <th class="py-3 px-6 text-left">Nachname</th>
+                        <th class="py-3 px-6 text-left">Gesamte Beurteilung (Kombiniert)</th>
+                        <th class="py-3 px-6 text-left">Einzelne gespeicherte Texte</th>
+                    </tr>
+                </thead>
+                <tbody class="text-gray-600 text-sm font-light">
+                </tbody>
+            `;
+            const tbody = table.querySelector('tbody');
+
+            sortedLastNames.forEach(lastName => {
+                const studentTexts = assessments[lastName]; // Array of {text, originalCode, category}
+
+                // Sort by category then by originalCode for consistent ordering
+                studentTexts.sort((a, b) => {
+                    if (a.category < b.category) return -1;
+                    if (a.category > b.category) return 1;
+                    return a.originalCode.localeCompare(b.originalCode);
+                });
+
+                const combinedTextContent = studentTexts.map(item => item.text).join(' ');
+
+                const row = tbody.insertRow();
+                row.className = 'border-b border-gray-200 hover:bg-gray-50';
+
+                const cellName = row.insertCell();
+                cellName.className = 'py-3 px-6 text-left whitespace-nowrap';
+                cellName.textContent = lastName;
+
+                const cellCombined = row.insertCell();
+                cellCombined.className = 'py-3 px-6 text-left';
+                cellCombined.innerHTML = `
+                    <div class="flex flex-col">
+                        <span class="combined-text-display mb-1">${combinedTextContent}</span>
+                        <button class="copy-combined-text-button bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold py-1 px-2 rounded-lg self-start transition duration-200 ease-in-out" data-text-to-copy="${combinedTextContent}">Kopieren</button>
+                    </div>`;
+
+                const cellIndividual = row.insertCell();
+                cellIndividual.className = 'py-3 px-6 text-left';
+                const individualTextsDiv = document.createElement('div');
+                individualTextsDiv.className = 'flex flex-col gap-1'; // Use gap for spacing between items
+
+                studentTexts.forEach(item => {
+                    const textItemSpan = document.createElement('span');
+                    textItemSpan.className = 'saved-text-item text-xs'; // Made text smaller here
+                    textItemSpan.textContent = `${item.text} `;
+
+                    const categorySpan = document.createElement('span');
+                    categorySpan.className = 'category-label text-xs'; // Re-use category label style
+                    categorySpan.textContent = item.category;
+                    textItemSpan.appendChild(categorySpan);
+
+
+                    const removeBtn = document.createElement('button');
+                    removeBtn.className = 'remove-button bg-red-500 hover:bg-red-600 text-white text-xs font-bold py-0.5 px-1 rounded-lg transition duration-200 ease-in-out ml-1';
+                    removeBtn.textContent = 'X';
+                    removeBtn.dataset.lastName = lastName;
+                    removeBtn.dataset.originalCode = item.originalCode;
+                    removeBtn.onclick = function() { // Direct event listener
+                        removeAssessment(this.dataset.lastName, this.dataset.originalCode);
+                    };
+                    textItemSpan.appendChild(removeBtn);
+                    individualTextsDiv.appendChild(textItemSpan);
+                });
+                cellIndividual.appendChild(individualTextsDiv);
+            });
+
+            tableContainer.appendChild(table);
+            modal.style.display = 'flex';
+
+            // Re-add event listeners for copy buttons as they are recreated
+            document.querySelectorAll('.copy-combined-text-button').forEach(button => {
+                button.addEventListener('click', function() {
+                    const textToCopy = this.dataset.textToCopy;
+                    navigator.clipboard.writeText(textToCopy).then(() => {
+                        // Display message inside modal or make it globally visible briefly
+                        displayMessage('Kombinierter Text kopiert!', 'info');
+                         setTimeout(() => displayMessage(''), 2000); // Clear after 2s
+                    }).catch(err => {
+                        console.error('Fehler beim Kopieren: ', err);
+                         displayMessage('Fehler beim Kopieren.', 'error');
+                         setTimeout(() => displayMessage(''), 2000);
+                    });
+                });
+            });
+        }
+
+    </script>
+</body>
+</html>
