@@ -1796,11 +1796,32 @@
       });
 
       const groupedSuggestions = {};
+      const DISTANCE_THRESHOLD = 3.0; // Max acceptable Mahalanobis distance
+
       for (const cat in categories) {
         // Sort comments within this category by distance (ascending)
         categories[cat].sort((a, b) => a.distance - b.distance);
+
+        // Filter by distance and valence
+        const filtered = categories[cat].filter(item => {
+          if (item.distance > DISTANCE_THRESHOLD) return false;
+
+          // Check for strong valence mismatch (6D)
+          for (let i = 0; i < sortedTraitNames.length; i++) {
+            const userVal = userVector6D[i];
+            const itemVal = item.vector6D[i];
+            // If user is very negative and item is positive, or vice versa
+            if ((userVal < -0.5 && itemVal > 0.2) || (userVal > 0.5 && itemVal < -0.2)) {
+              return false;
+            }
+          }
+          return true;
+        });
+
         // Take the top MIN_SUGGESTIONS_PER_CATEGORY suggestions for this category
-        groupedSuggestions[cat] = categories[cat].slice(0, MIN_SUGGESTIONS_PER_CATEGORY);
+        if (filtered.length > 0) {
+          groupedSuggestions[cat] = filtered.slice(0, MIN_SUGGESTIONS_PER_CATEGORY);
+        }
       }
 
       const resultsDiv = document.getElementById('results');
