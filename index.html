@@ -304,6 +304,50 @@
       background-color: #2196F3;
       /* Blue */
     }
+
+    /* Quality adjustment buttons (+/-) */
+    .quality-buttons {
+      display: flex;
+      gap: 0.25rem;
+      margin-right: 0.5rem;
+    }
+
+    .quality-btn {
+      width: 24px;
+      height: 24px;
+      border: none;
+      border-radius: 4px;
+      font-weight: bold;
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 0.15s, opacity 0.15s;
+    }
+
+    .quality-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .quality-btn.worse {
+      background-color: #fdd;
+      color: #d62728;
+    }
+
+    .quality-btn.worse:hover:not(:disabled) {
+      background-color: #f5c5c5;
+    }
+
+    .quality-btn.better {
+      background-color: #d4f1d4;
+      color: #3d8b4d;
+    }
+
+    .quality-btn.better:hover:not(:disabled) {
+      background-color: #b8e6b8;
+    }
   </style>
 </head>
 
@@ -472,16 +516,63 @@
       for (const trait of sortedTraitNames) {
         const userVal = userWeights[trait];
         const commentVal = commentWeights[trait];
-        
+
         // Skip null values in comment
         if (commentVal === null || commentVal === undefined) continue;
-        
+
         // If user is very negative and item is positive, or vice versa
         if ((userVal < -0.5 && commentVal > 0.2) || (userVal > 0.5 && commentVal < -0.2)) {
           return true;
         }
       }
       return false;
+    }
+
+    /**
+     * Finds an alternative ASV text in the same category that matches a shifted trait profile.
+     * Used for the +/- buttons to find better or worse evaluations.
+     * @param {Object} currentComment - The current comment object with weights
+     * @param {string} category - The category to search within
+     * @param {number} direction - +1 for better student, -1 for worse student
+     * @param {Array<string>} excludeCodes - Array of comment codes to exclude from results
+     * @returns {Object|null} The alternative comment data or null if none found
+     */
+    function findAlternativeText(currentComment, category, direction, excludeCodes) {
+      const SHIFT_AMOUNT = 0.3; // How much to shift the weights per step
+
+      // Create shifted weights based on the current comment's weights
+      const shiftedWeights = {};
+      for (const trait of sortedTraitNames) {
+        const currentVal = currentComment.weights[trait];
+        if (currentVal !== null && currentVal !== undefined) {
+          // Shift in the direction (positive = better student, negative = worse student)
+          shiftedWeights[trait] = Math.max(-1, Math.min(1, currentVal + direction * SHIFT_AMOUNT));
+        } else {
+          // Use neutral for undefined traits in the search
+          shiftedWeights[trait] = 0;
+        }
+      }
+
+      // Find all comments in the same category, excluding all specified codes
+      const candidateComments = originalCommentData.filter(data =>
+        data.category === category && !excludeCodes.includes(data.comment.code)
+      );
+
+      if (candidateComments.length === 0) return null;
+
+      // Calculate distance from shifted weights for each candidate
+      const withDistances = candidateComments.map(data => ({
+        ...data,
+        distance: calculateMaskedDistance(shiftedWeights, data.comment.weights)
+      }));
+
+      // Sort by distance and return the closest
+      withDistances.sort((a, b) => a.distance - b.distance);
+
+      // Only return if the best match is reasonably close
+      if (withDistances[0].distance > 1.5) return null;
+
+      return withDistances[0];
     }
 
     // Function to load JSON data and prepare comment data
@@ -1675,6 +1766,87 @@
     }
 
     /**
+     * Personalizes text by replacing gender/name placeholders.
+     * @param {string} originalText - The original ASV text with placeholders
+     * @param {boolean} isMale - Whether the student is male
+     * @param {string} lastName - The student's last name
+     * @returns {string} The personalized text
+     */
+    function personalizeText(originalText, isMale, lastName) {
+      const genderPronounSubject = isMale ? 'er' : 'sie';
+      const genderPronounPossessive = isMale ? 'sein' : 'ihr';
+      const genderSalutation = isMale ? 'Herr' : 'Frau';
+
+      return originalText
+        .replace(/\[Er\/Sie\]/g, genderPronounSubject.charAt(0).toUpperCase() + genderPronounSubject.slice(1))
+        .replace(/\[Seine\/Ihre\]/g, genderPronounPossessive.charAt(0).toUpperCase() + genderPronounPossessive.slice(1) + 'e')
+        .replace(/\[Sein\/Ihr\]/g, genderPronounPossessive.charAt(0).toUpperCase() + genderPronounPossessive.slice(1))
+        .replace(/\[seinen\/ihren\]/g, genderPronounPossessive + 'en')
+        .replace(/\[ihm\/ihr\]/g, isMale ? 'ihm' : 'ihr')
+        .replace(/\[Der Schüler\/Die Schülerin\]/g, isMale ? 'Der Schüler' : 'Die Schülerin')
+        .replace(/\[Schüler\/Schülerin\]/g, `${genderSalutation} ${lastName}`)
+        .replace(/Der Schüler/g, `${genderSalutation} ${lastName}`)
+        .replace(/der Schüler/g, `${genderSalutation} ${lastName}`)
+        .replace(/\bEr\b/g, genderPronounSubject.charAt(0).toUpperCase() + genderPronounSubject.slice(1))
+        .replace(/\ber\b/g, genderPronounSubject)
+        .replace(/\bIhm\b/g, isMale ? 'Ihm' : 'Ihr')
+        .replace(/\bihm\b/g, isMale ? 'ihm' : 'ihr')
+        .replace(/\[sein\/ihr\]/g, genderPronounPossessive)
+        .replace(/\[seine\/ihre\]/g, genderPronounPossessive + 'e')
+        .replace(/\bSeine\b/g, genderPronounPossessive.charAt(0).toUpperCase() + genderPronounPossessive.slice(1) + 'e')
+        .replace(/\bseine\b/g, genderPronounPossessive + 'e')
+        .replace(/\bSeiner\b/g, genderPronounPossessive.charAt(0).toUpperCase() + genderPronounPossessive.slice(1) + 'er')
+        .replace(/\bseiner\b/g, genderPronounPossessive + 'er')
+        .replace(/\bSein\b/g, genderPronounPossessive.charAt(0).toUpperCase() + genderPronounPossessive.slice(1))
+        .replace(/\bsein\b/g, genderPronounPossessive);
+    }
+
+    /**
+     * Handles clicking the +/- quality buttons to swap suggestion text.
+     * @param {HTMLElement} suggestionItemDiv - The suggestion item container
+     * @param {number} direction - +1 for better, -1 for worse
+     */
+    function handleQualityButtonClick(suggestionItemDiv, direction) {
+      const currentCode = suggestionItemDiv.dataset.code;
+      const category = suggestionItemDiv.dataset.category;
+      const lastName = document.getElementById('lastName').value.trim();
+      const isMale = document.getElementById('genderMale').classList.contains('active');
+
+      // Find the current comment data
+      const currentData = originalCommentData.find(d => d.comment.code === currentCode);
+      if (!currentData) return;
+
+      // Collect all codes currently displayed in this category to exclude them
+      const categoryContainer = suggestionItemDiv.closest('.collapsible-content');
+      const allSuggestionsInCategory = categoryContainer.querySelectorAll('.suggestion-text-and-button');
+      const excludeCodes = Array.from(allSuggestionsInCategory).map(el => el.dataset.code);
+
+      // Find alternative text, excluding all currently displayed codes
+      const alternative = findAlternativeText(currentData.comment, category, direction, excludeCodes);
+
+      if (!alternative) {
+        displayMessage(direction > 0 ? 'Kein besserer Text verfügbar.' : 'Kein schlechterer Text verfügbar.', 'info');
+        return;
+      }
+
+      // Update the suggestion item
+      const textSpan = suggestionItemDiv.querySelector('.suggestion-text');
+      const personalizedText = personalizeText(alternative.comment.text, isMale, lastName);
+      textSpan.textContent = personalizedText;
+
+      // Update data attributes
+      suggestionItemDiv.dataset.code = alternative.comment.code;
+
+      // Update save button onclick
+      const saveButton = suggestionItemDiv.querySelector('.save-btn');
+      if (saveButton) {
+        saveButton.onclick = function() {
+          saveAssessment(lastName, personalizedText, alternative.comment.code, alternative.category);
+        };
+      }
+    }
+
+    /**
      * Generates suggestions based on masked Euclidean distance in trait space.
      */
     async function generateSuggestions() {
@@ -1743,10 +1915,6 @@
         return;
       }
 
-      const genderPronounSubject = isMale ? 'er' : 'sie';
-      const genderPronounPossessive = isMale ? 'sein' : 'ihr';
-      const genderSalutation = isMale ? 'Herr' : 'Frau';
-
       let categoryIndex = 0;
       for (const category in groupedSuggestions) {
         const categoryDiv = document.createElement('div');
@@ -1764,31 +1932,36 @@
         contentDiv.className = 'collapsible-content space-y-3 expanded'; // Add space-y for vertical spacing
 
         groupedSuggestions[category].forEach(item => {
-          const originalText = item.comment.text;
-          const personalizedText = originalText
-            .replace(/\[Er\/Sie\]/g, genderPronounSubject.charAt(0).toUpperCase() + genderPronounSubject.slice(1))
-            .replace(/\[Seine\/Ihre\]/g, genderPronounPossessive.charAt(0).toUpperCase() + genderPronounPossessive.slice(1) + 'e')
-            .replace(/\[Sein\/Ihr\]/g, genderPronounPossessive.charAt(0).toUpperCase() + genderPronounPossessive.slice(1))
-            .replace(/\[seinen\/ihren\]/g, genderPronounPossessive + 'en')
-            .replace(/\[ihm\/ihr\]/g, isMale ? 'ihm' : 'ihr')
-            .replace(/\[Der Schüler\/Die Schülerin\]/g, isMale ? 'Der Schüler' : 'Die Schülerin')
-            .replace(/\[Schüler\/Schülerin\]/g, `${genderSalutation} ${lastName}`)
-            .replace(/Der Schüler/g, `${genderSalutation} ${lastName}`)
-            .replace(/der Schüler/g, `${genderSalutation} ${lastName}`)
-            .replace(/\bEr\b/g, genderPronounSubject.charAt(0).toUpperCase() + genderPronounSubject.slice(1))
-            .replace(/\ber\b/g, genderPronounSubject)
-            .replace(/\bIhm\b/g, isMale ? 'Ihm' : 'Ihr')
-            .replace(/\bihm\b/g, isMale ? 'ihm' : 'ihr')
-            .replace(/\[sein\/ihr\]/g, genderPronounPossessive)
-            .replace(/\[seine\/ihre\]/g, genderPronounPossessive + 'e')
-            .replace(/\bSeine\b/g, genderPronounPossessive.charAt(0).toUpperCase() + genderPronounPossessive.slice(1) + 'e')
-            .replace(/\bseine\b/g, genderPronounPossessive + 'e')
-            .replace(/\bSeiner\b/g, genderPronounPossessive.charAt(0).toUpperCase() + genderPronounPossessive.slice(1) + 'er')
-            .replace(/\bseiner\b/g, genderPronounPossessive + 'er')
-            .replace(/\bSein\b/g, genderPronounPossessive.charAt(0).toUpperCase() + genderPronounPossessive.slice(1))
-            .replace(/\bsein\b/g, genderPronounPossessive);
+          const personalizedText = personalizeText(item.comment.text, isMale, lastName);
+
           const suggestionItemDiv = document.createElement('div');
           suggestionItemDiv.className = 'suggestion-text-and-button';
+          suggestionItemDiv.dataset.code = item.comment.code;
+          suggestionItemDiv.dataset.category = item.category;
+
+          // Quality adjustment buttons (-/+)
+          const qualityButtonsDiv = document.createElement('div');
+          qualityButtonsDiv.className = 'quality-buttons';
+
+          const worseButton = document.createElement('button');
+          worseButton.className = 'quality-btn worse';
+          worseButton.textContent = '-';
+          worseButton.title = 'Schlechtere Bewertung';
+          worseButton.onclick = function() {
+            handleQualityButtonClick(suggestionItemDiv, -1);
+          };
+          qualityButtonsDiv.appendChild(worseButton);
+
+          const betterButton = document.createElement('button');
+          betterButton.className = 'quality-btn better';
+          betterButton.textContent = '+';
+          betterButton.title = 'Bessere Bewertung';
+          betterButton.onclick = function() {
+            handleQualityButtonClick(suggestionItemDiv, 1);
+          };
+          qualityButtonsDiv.appendChild(betterButton);
+
+          suggestionItemDiv.appendChild(qualityButtonsDiv);
 
           const textSpan = document.createElement('span');
           textSpan.className = 'suggestion-text text-gray-700';
@@ -1798,26 +1971,13 @@
           const actionsDiv = document.createElement('div');
           actionsDiv.className = 'flex flex-col space-y-2'; // Stack buttons vertically
 
-          /*const copyButton = document.createElement('button');
-          copyButton.className = 'bg-green-500 hover:bg-green-600 text-white text-xs font-bold py-1 px-2 rounded-md transition duration-150 ease-in-out shadow-sm';
-          copyButton.textContent = 'Kopieren';
-          copyButton.onclick = function() {
-              document.execCommand('copy'); // Fallback for clipboard API issues in iframes
-              const tempInput = document.createElement('textarea');
-              tempInput.value = personalizedText;
-              document.body.appendChild(tempInput);
-              tempInput.select();
-              document.execCommand('copy');
-              document.body.removeChild(tempInput);
-              displayMessage('Text kopiert!', 'success');
-          };
-          actionsDiv.appendChild(copyButton);*/
-
           const saveButton = document.createElement('button');
-          saveButton.className = 'bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold py-1 px-2 rounded-md transition duration-150 ease-in-out shadow-sm';
+          saveButton.className = 'save-btn bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold py-1 px-2 rounded-md transition duration-150 ease-in-out shadow-sm';
           saveButton.textContent = 'Speichern';
           saveButton.onclick = function () {
-            saveAssessment(lastName, personalizedText, item.comment.code, item.category);
+            const currentCode = suggestionItemDiv.dataset.code;
+            const currentText = textSpan.textContent;
+            saveAssessment(lastName, currentText, currentCode, item.category);
           };
           actionsDiv.appendChild(saveButton);
 
