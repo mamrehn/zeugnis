@@ -350,7 +350,7 @@
       </button>
       <button id="showSavedTexts"
         class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-3 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-75 transition duration-200 ease-in-out shadow-md">
-        Gespeicherte Texte anzeigen
+        Lokal gespeicherte Texte anzeigen
       </button>
     </div>
 
@@ -398,9 +398,9 @@
       "Aktivitaetsniveau": {
         "-1.0": "Unruhig störend",
         "-0.5": "Eher unruhig",
-        "0.0": "Neutral",
-        "0.5": "Eher besonnen",
-        "1.0": "Sehr besonnen"
+        "0.0": "Passiv zurückhaltend",
+        "0.5": "Eher aktiv arbeitend",
+        "1.0": "Angemessen aktiv"
       },
       "Lernhaltung": {
         "-1.0": "Nachlässig gleichgültig",
@@ -824,12 +824,12 @@
                 "weights": {
                   "Mitarbeit": 0.2,
                   "Sozialverhalten": null,
-                  "Aktivitaetsniveau": 0.5,
+                  "Aktivitaetsniveau": 0.0,
                   "Lernhaltung": 0.3,
                   "Aufmerksamkeit": 0.9,
                   "Selbststaendigkeit": null
                 },
-                "reason": "'Aufmerksam und konzentriert verfolgt' is strong for Aufmerksamkeit. Implies 'ruhig besonnen' for Aktivitätsniveau and some positive Mitarbeit (passive) and Lernhaltung."
+                "reason": "'Aufmerksam und konzentriert verfolgt' is strong for Aufmerksamkeit. Passiv (0.0) for Aktivitätsniveau as following without active participation."
               }
             ]
           }
@@ -849,7 +849,7 @@
                   "Aufmerksamkeit": null,
                   "Selbststaendigkeit": null
                 },
-                "reason": "'Vorbildlich' (exemplary) Verhalten is max for Sozialverhalten. Strongly implies 'ruhig besonnen' for Aktivitätsniveau."
+                "reason": "'Vorbildlich' (exemplary) Verhalten is max for Sozialverhalten. Strongly implies 'mitarbeitend' for Aktivitätsniveau."
               },
               {
                 "code": "a211a",
@@ -862,7 +862,7 @@
                   "Aufmerksamkeit": null,
                   "Selbststaendigkeit": null
                 },
-                "reason": "'Sehr lobenswert' (very commendable) Verhalten is high for Sozialverhalten. Implies 'ruhig besonnen' for Aktivitätsniveau."
+                "reason": "'Sehr lobenswert' (very commendable) Verhalten is high for Sozialverhalten. Strongly implies 'mitarbeitend' for Aktivitätsniveau."
               },
               {
                 "code": "a211b",
@@ -870,12 +870,12 @@
                 "weights": {
                   "Mitarbeit": null,
                   "Sozialverhalten": 0.9,
-                  "Aktivitaetsniveau": 0.7,
+                  "Aktivitaetsniveau": 0.6,
                   "Lernhaltung": null,
                   "Aufmerksamkeit": null,
                   "Selbststaendigkeit": null
                 },
-                "reason": "'Vollste Anerkennung' (fullest recognition) for Verhalten indicates high Sozialverhalten. Implies 'ruhig besonnen' for Aktivitätsniveau."
+                "reason": "'Vollste Anerkennung' (fullest recognition) for Verhalten indicates high Sozialverhalten. Strongly implies 'mitarbeitend' for Aktivitätsniveau."
               },
               {
                 "code": "a211c",
@@ -888,7 +888,7 @@
                   "Aufmerksamkeit": null,
                   "Selbststaendigkeit": null
                 },
-                "reason": "'Mustergültiges Benehmen' (exemplary conduct) is max for Sozialverhalten. Strongly implies 'ruhig besonnen' for Aktivitätsniveau."
+                "reason": "'Mustergültiges Benehmen' (exemplary conduct) is max for Sozialverhalten. Strongly implies 'mitarbeitend' for Aktivitätsniveau."
               }
             ]
           },
@@ -900,12 +900,12 @@
                 "weights": {
                   "Mitarbeit": null,
                   "Sozialverhalten": 0.8,
-                  "Aktivitaetsniveau": 0.6,
+                  "Aktivitaetsniveau": null,
                   "Lernhaltung": null,
                   "Aufmerksamkeit": null,
                   "Selbststaendigkeit": null
                 },
-                "reason": "'Lobenswert' (commendable) Verhalten for Sozialverhalten. Implies 'ruhig besonnen' for Aktivitätsniveau."
+                "reason": "'Lobenswert' (commendable) Verhalten for Sozialverhalten. No direct statement about activity level."
               },
               {
                 "code": "a212a",
@@ -918,7 +918,7 @@
                   "Aufmerksamkeit": null,
                   "Selbststaendigkeit": null
                 },
-                "reason": "'Tadelloses Benehmen' (impeccable conduct) is high for Sozialverhalten. Implies 'ruhig besonnen' for Aktivitätsniveau."
+                "reason": "'Tadelloses Benehmen' (impeccable conduct) is high for Sozialverhalten. Strongly implies 'mitarbeitend' for Aktivitätsniveau."
               },
               {
                 "code": "a212b",
@@ -926,12 +926,12 @@
                 "weights": {
                   "Mitarbeit": 0.2,
                   "Sozialverhalten": 0.8,
-                  "Aktivitaetsniveau": 0.4,
+                  "Aktivitaetsniveau": 0.6,
                   "Lernhaltung": null,
                   "Aufmerksamkeit": null,
                   "Selbststaendigkeit": 0.1
                 },
-                "reason": "'Freundlichkeit und Hilfsbereitschaft' directly describe positive Sozialverhalten. Implies positive Aktivitätsniveau. Slight positive for Mitarbeit."
+                "reason": "'Freundlichkeit und Hilfsbereitschaft' directly describe positive Sozialverhalten. 'Hilfsbereitschaft' implies active engagement (0.6). Slight positive for Mitarbeit."
               },
               {
                 "code": "a212c",
@@ -939,12 +939,12 @@
                 "weights": {
                   "Mitarbeit": null,
                   "Sozialverhalten": 0.7,
-                  "Aktivitaetsniveau": 0.5,
+                  "Aktivitaetsniveau": null,
                   "Lernhaltung": null,
                   "Aufmerksamkeit": null,
                   "Selbststaendigkeit": null
                 },
-                "reason": "'Gewandte Umgangsformen' (polished manners) are positive for Sozialverhalten. Implies 'ruhig besonnen' for Aktivitätsniveau."
+                "reason": "'Gewandte Umgangsformen' (polished manners) are positive for Sozialverhalten. No direct statement about activity level."
               }
             ]
           },
@@ -956,12 +956,12 @@
                 "weights": {
                   "Mitarbeit": null,
                   "Sozialverhalten": 0.6,
-                  "Aktivitaetsniveau": 0.4,
+                  "Aktivitaetsniveau": null,
                   "Lernhaltung": null,
                   "Aufmerksamkeit": null,
                   "Selbststaendigkeit": null
                 },
-                "reason": "'Einwandfrei' (unobjectionable) Verhalten is good for Sozialverhalten. Implies 'ruhig besonnen' for Aktivitätsniveau."
+                "reason": "'Einwandfrei' (unobjectionable) Verhalten is good for Sozialverhalten. No direct statement about activity level."
               },
               {
                 "code": "a213a",
@@ -969,12 +969,12 @@
                 "weights": {
                   "Mitarbeit": null,
                   "Sozialverhalten": 0.4,
-                  "Aktivitaetsniveau": 0.3,
+                  "Aktivitaetsniveau": null,
                   "Lernhaltung": null,
                   "Aufmerksamkeit": null,
                   "Selbststaendigkeit": null
                 },
-                "reason": "'Meistens ordentlich' (mostly orderly) Verhalten for Sozialverhalten. 'Ordentlich' supports positive Aktivitätsniveau."
+                "reason": "'Meistens ordentlich' (mostly orderly) Verhalten for Sozialverhalten. No direct statement about activity level."
               },
               {
                 "code": "a213b",
@@ -982,12 +982,12 @@
                 "weights": {
                   "Mitarbeit": null,
                   "Sozialverhalten": 0.5,
-                  "Aktivitaetsniveau": 0.3,
+                  "Aktivitaetsniveau": null,
                   "Lernhaltung": null,
                   "Aufmerksamkeit": null,
                   "Selbststaendigkeit": null
                 },
-                "reason": "'Insgesamt befriedigend' (overall satisfactory) Verhalten for Sozialverhalten. Implies positive Aktivitätsniveau."
+                "reason": "'Insgesamt befriedigend' (overall satisfactory) Verhalten for Sozialverhalten. No direct statement about activity level."
               },
               {
                 "code": "a213c",
@@ -995,12 +995,12 @@
                 "weights": {
                   "Mitarbeit": null,
                   "Sozialverhalten": 0.5,
-                  "Aktivitaetsniveau": 0.4,
+                  "Aktivitaetsniveau": null,
                   "Lernhaltung": null,
                   "Aufmerksamkeit": null,
                   "Selbststaendigkeit": null
                 },
-                "reason": "'Kein Anlass zu Beanstandungen' (no cause for complaint) means good Sozialverhalten. Implies 'ruhig besonnen' for Aktivitätsniveau."
+                "reason": "'Kein Anlass zu Beanstandungen' (no cause for complaint) means good Sozialverhalten. No direct statement about activity level."
               }
             ]
           },
@@ -1012,12 +1012,12 @@
                 "weights": {
                   "Mitarbeit": null,
                   "Sozialverhalten": 0.3,
-                  "Aktivitaetsniveau": 0.2,
+                  "Aktivitaetsniveau": null,
                   "Lernhaltung": null,
                   "Aufmerksamkeit": null,
                   "Selbststaendigkeit": null
                 },
-                "reason": "'Zufriedenstellend' (satisfactory) Verhalten for Sozialverhalten, on the lower side. Implies mostly positive Aktivitätsniveau."
+                "reason": "'Zufriedenstellend' (satisfactory) Verhalten for Sozialverhalten, on the lower side. No direct statement about activity level."
               },
               {
                 "code": "a214a",
@@ -1025,12 +1025,12 @@
                 "weights": {
                   "Mitarbeit": null,
                   "Sozialverhalten": 0.2,
-                  "Aktivitaetsniveau": -0.2,
+                  "Aktivitaetsniveau": -0.4,
                   "Lernhaltung": null,
                   "Aufmerksamkeit": -0.1,
                   "Selbststaendigkeit": null
                 },
-                "reason": "'Lebhaft' impacts Aktivitätsniveau (not calm). 'Meist ordentlich' keeps Sozialverhalten barely positive. Slight negative on Aufmerksamkeit."
+                "reason": "'Lebhaft' indicates slightly restless behavior (-0.4). 'Meist ordentlich' keeps Sozialverhalten barely positive. Slight negative on Aufmerksamkeit."
               },
               {
                 "code": "a214b",
@@ -1038,12 +1038,12 @@
                 "weights": {
                   "Mitarbeit": null,
                   "Sozialverhalten": 0.4,
-                  "Aktivitaetsniveau": 0.3,
+                  "Aktivitaetsniveau": null,
                   "Lernhaltung": null,
                   "Aufmerksamkeit": null,
                   "Selbststaendigkeit": null
                 },
-                "reason": "'Im Allgemeinen ordentlich und anständig' (generally orderly and decent) for Sozialverhalten. Supports positive Aktivitätsniveau."
+                "reason": "'Im Allgemeinen ordentlich und anständig' (generally orderly and decent) for Sozialverhalten. No direct statement about activity level."
               },
               {
                 "code": "a214c",
@@ -1051,12 +1051,12 @@
                 "weights": {
                   "Mitarbeit": null,
                   "Sozialverhalten": 0.4,
-                  "Aktivitaetsniveau": 0.3,
+                  "Aktivitaetsniveau": null,
                   "Lernhaltung": null,
                   "Aufmerksamkeit": null,
                   "Selbststaendigkeit": null
                 },
-                "reason": "'Ordnungsgemäß' (proper/orderly) Verhalten for Sozialverhalten. Supports positive Aktivitätsniveau."
+                "reason": "'Ordnungsgemäß' (proper/orderly) Verhalten for Sozialverhalten. No direct statement about activity level."
               }
             ]
           },
@@ -1301,12 +1301,12 @@
                 "weights": {
                   "Mitarbeit": 0.3,
                   "Sozialverhalten": 0.9,
-                  "Aktivitaetsniveau": 0.5,
+                  "Aktivitaetsniveau": 0.7,
                   "Lernhaltung": null,
                   "Aufmerksamkeit": null,
                   "Selbststaendigkeit": null
                 },
-                "reason": "'Bemerkenswerte Sozialkompetenz' is high for Sozialverhalten. Implies positive Aktivitätsniveau and aids Mitarbeit."
+                "reason": "'Bemerkenswerte Sozialkompetenz' is high for Sozialverhalten. Implies active social engagement (0.7) and aids Mitarbeit."
               },
               {
                 "code": "a261",
@@ -1314,12 +1314,12 @@
                 "weights": {
                   "Mitarbeit": 0.8,
                   "Sozialverhalten": 0.8,
-                  "Aktivitaetsniveau": 0.2,
+                  "Aktivitaetsniveau": 0.7,
                   "Lernhaltung": null,
                   "Aufmerksamkeit": null,
                   "Selbststaendigkeit": null
                 },
-                "reason": "'Bereit, konstruktiv in Gruppe zusammenzuarbeiten' is strong for Mitarbeit and Sozialverhalten. Implies positive Aktivitätsniveau."
+                "reason": "'Bereit, konstruktiv in Gruppe zusammenzuarbeiten' is strong for Mitarbeit and Sozialverhalten. Active group participation (0.7)."
               },
               {
                 "code": "a262",
@@ -1327,12 +1327,12 @@
                 "weights": {
                   "Mitarbeit": 0.7,
                   "Sozialverhalten": 0.7,
-                  "Aktivitaetsniveau": 0.2,
-                  "Lernhaltung": 0.6,
+                  "Aktivitaetsniveau": 0.6,
+                  "Lernhaltung": 0.8,
                   "Aufmerksamkeit": null,
                   "Selbststaendigkeit": null
                 },
-                "reason": "'Hohe Teamfähigkeit' for Mitarbeit and Sozialverhalten. 'Überdurchschnittliche Leistungsbereitschaft' for Lernhaltung. Implies positive Aktivitätsniveau."
+                "reason": "'Hohe Teamfähigkeit' for Mitarbeit and Sozialverhalten. 'Überdurchschnittliche Leistungsbereitschaft' for Lernhaltung (0.8). Active team engagement (0.6)."
               },
               {
                 "code": "a263",
@@ -1340,12 +1340,12 @@
                 "weights": {
                   "Mitarbeit": 0.1,
                   "Sozialverhalten": 0.9,
-                  "Aktivitaetsniveau": 0.5,
+                  "Aktivitaetsniveau": 0.7,
                   "Lernhaltung": null,
                   "Aufmerksamkeit": null,
                   "Selbststaendigkeit": null
                 },
-                "reason": "'Positiven Einfluss auf Klassenklima' is very high for Sozialverhalten. Implies positive Aktivitätsniveau. Minor positive for Mitarbeit."
+                "reason": "'Positiven Einfluss auf Klassenklima' is very high for Sozialverhalten. Active positive influence (0.7). Minor positive for Mitarbeit."
               },
               {
                 "code": "a264",
@@ -1366,12 +1366,12 @@
                 "weights": {
                   "Mitarbeit": 0.9,
                   "Sozialverhalten": 0.8,
-                  "Aktivitaetsniveau": 0.2,
+                  "Aktivitaetsniveau": 0.7,
                   "Lernhaltung": null,
                   "Aufmerksamkeit": null,
                   "Selbststaendigkeit": null
                 },
-                "reason": "'Sehr gute Fähigkeiten, gemeinsam im Team zu arbeiten' is very strong for Mitarbeit and Sozialverhalten. Implies positive Aktivitätsniveau."
+                "reason": "'Sehr gute Fähigkeiten, gemeinsam im Team zu arbeiten' is very strong for Mitarbeit and Sozialverhalten. Active team collaboration (0.7)."
               },
               {
                 "code": "a266",
@@ -1379,12 +1379,12 @@
                 "weights": {
                   "Mitarbeit": 0.2,
                   "Sozialverhalten": 0.9,
-                  "Aktivitaetsniveau": 0.4,
+                  "Aktivitaetsniveau": 0.6,
                   "Lernhaltung": null,
                   "Aufmerksamkeit": null,
                   "Selbststaendigkeit": 0.3
                 },
-                "reason": "'Sozial verantwortungsvolles und hilfsbereites Verhalten' is high for Sozialverhalten. Implies positive Aktivitätsniveau and some Selbstständigkeit."
+                "reason": "'Sozial verantwortungsvolles und hilfsbereites Verhalten' is high for Sozialverhalten. Active helpfulness (0.6) and some Selbstständigkeit."
               },
               {
                 "code": "a267",
@@ -1392,12 +1392,12 @@
                 "weights": {
                   "Mitarbeit": 0.3,
                   "Sozialverhalten": 1.0,
-                  "Aktivitaetsniveau": 0.5,
+                  "Aktivitaetsniveau": 0.8,
                   "Lernhaltung": null,
                   "Aufmerksamkeit": null,
                   "Selbststaendigkeit": 0.2
                 },
-                "reason": "'Integrative Fähigkeiten' and 'Engagement für Sozialklima' is max for Sozialverhalten. Positive for Aktivitätsniveau, Mitarbeit, and some Selbstständigkeit."
+                "reason": "'Integrative Fähigkeiten' and 'engagierte sich' is max for Sozialverhalten. Very active engagement (0.8), positive for Mitarbeit and some Selbstständigkeit."
               },
               {
                 "code": "a268",
@@ -1405,12 +1405,12 @@
                 "weights": {
                   "Mitarbeit": 0.4,
                   "Sozialverhalten": 0.9,
-                  "Aktivitaetsniveau": 0.3,
+                  "Aktivitaetsniveau": 0.6,
                   "Lernhaltung": 0.1,
                   "Aufmerksamkeit": null,
                   "Selbststaendigkeit": 0.2
                 },
-                "reason": "'Hilfestellung für andere leisten' is very high for Sozialverhalten. Positive for Mitarbeit, Aktivitätsniveau, and some Selbstständigkeit."
+                "reason": "'Hilfestellung für andere leisten' is very high for Sozialverhalten. Active helping behavior (0.6), positive for Mitarbeit and some Selbstständigkeit."
               }
             ]
           }
