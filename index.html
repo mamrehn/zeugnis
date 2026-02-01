@@ -6,11 +6,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Schülerbeurteilungs-App</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- UMAP-JS for dimensionality reduction -->
-  <script src="https://cdn.jsdelivr.net/npm/umap-js@1.4.0/lib/umap-js.min.js"
-    integrity="sha256-nSJtslzFfq4eGEN2XqxkyQ9rzP3rLCviUgsuMQq8Pe0=" crossorigin="anonymous"></script>
-  <!-- math.js for matrix operations (covariance, inverse) for Mahalanobis distance -->
-  <script src="https://cdn.jsdelivr.net/npm/mathjs@15.1.0/lib/browser/math.min.js"></script>
   <style>
     body {
       font-family: "Inter", sans-serif;
@@ -371,13 +366,9 @@
     let studentAssessmentData; // Global variable to hold the JSON data
     const LOCAL_STORAGE_KEY = 'studentAssessments';
     const MIN_SUGGESTIONS_PER_CATEGORY = 3; // Minimum suggestions to pick from each category
-    const K_NEIGHBORS = 12; // Number of nearest neighbors for Mahalanobis distance
 
-    let umap; // Global UMAP instance
-    let umapReducedCommentVectors = []; // Stores 2D UMAP-reduced vectors for comments
-    let originalCommentData = []; // Stores original comment objects along with their 6D vectors
-    let inverseCovarianceMatrix = null; // Stores the inverse covariance matrix for Mahalanobis distance
-    let sortedTraitNames = []; // To maintain a consistent order for 6D vectors
+    let originalCommentData = []; // Stores original comment objects along with their weights
+    let sortedTraitNames = []; // To maintain a consistent order for traits
 
     // Trait descriptions mapping
     const traitDescriptions = {
@@ -442,79 +433,58 @@
     }
 
     /**
-     * Converts a comment's weights object into a 6D vector based on a consistent trait order.
-     * Missing traits are filled with 0.0 (neutral).
-     * @param {Object} weights - The weights object from a comment.
-     * @returns {number[]} A 6D vector.
+     * Calculates masked Euclidean distance between user input and a comment's weights.
+     * Only compares dimensions where the comment has non-null values.
+     * This properly handles sparse trait annotations.
+     * @param {Object} userWeights - User's trait values (all defined, -1 to 1).
+     * @param {Object} commentWeights - Comment's trait weights (may have nulls).
+     * @returns {number} The normalized Euclidean distance.
      */
-    function convertWeightsToVector(weights) {
-      const vector = [];
-      sortedTraitNames.forEach(trait => {
-        // Use 0.0 for null or undefined weights, ensuring a consistent 6D vector
-        vector.push(weights[trait] !== null && weights[trait] !== undefined ? weights[trait] : 0.0);
-      });
-      return vector;
+    function calculateMaskedDistance(userWeights, commentWeights) {
+      let sumSquaredDiff = 0;
+      let validDimensions = 0;
+      
+      for (const trait of sortedTraitNames) {
+        const userVal = userWeights[trait];
+        const commentVal = commentWeights[trait];
+        
+        // Skip if comment has null/undefined for this trait
+        if (commentVal === null || commentVal === undefined) continue;
+        
+        const diff = userVal - commentVal;
+        sumSquaredDiff += diff * diff;
+        validDimensions++;
+      }
+      
+      // Normalize by number of valid dimensions to make distances comparable
+      if (validDimensions === 0) return Infinity;
+      return Math.sqrt(sumSquaredDiff / validDimensions);
     }
 
     /**
-     * Calculates the Mahalanobis distance between two vectors given the inverse covariance matrix.
-     * D_M(x, y) = sqrt((x - y)^T * S^-1 * (x - y))
-     * @param {number[]} vec1 - The first vector (2D).
-     * @param {number[]} vec2 - The second vector (2D).
-     * @param {math.Matrix} invCov - The inverse covariance matrix.
-     * @returns {number} The Mahalanobis distance.
+     * Checks for strong valence mismatch between user input and comment.
+     * Returns true if there's a problematic mismatch.
+     * @param {Object} userWeights - User's trait values.
+     * @param {Object} commentWeights - Comment's trait weights.
+     * @returns {boolean} True if valence mismatch detected.
      */
-    function calculateMahalanobisDistance(vec1, vec2, invCov) {
-      try {
-        const diff = math.subtract(vec1, vec2);
-        const diffT = math.transpose(diff); // Transpose of the difference vector
-        const term1 = math.multiply(diffT, invCov);
-        const term2 = math.multiply(term1, diff);
-        return Math.sqrt(term2);
-      } catch (error) {
-        console.error("Error calculating Mahalanobis distance:", error);
-        displayMessage("Fehler bei der Mahalanobis-Distanzberechnung.", "error");
-        return Infinity; // Return a very large distance on error
+    function hasValenceMismatch(userWeights, commentWeights) {
+      for (const trait of sortedTraitNames) {
+        const userVal = userWeights[trait];
+        const commentVal = commentWeights[trait];
+        
+        // Skip null values in comment
+        if (commentVal === null || commentVal === undefined) continue;
+        
+        // If user is very negative and item is positive, or vice versa
+        if ((userVal < -0.5 && commentVal > 0.2) || (userVal > 0.5 && commentVal < -0.2)) {
+          return true;
+        }
       }
+      return false;
     }
 
-    /**
-     * Calculates the covariance matrix for a set of 2D vectors.
-     * @param {number[][]} data - An array of 2D vectors.
-     * @returns {math.Matrix} The covariance matrix.
-     */
-    function calculateCovarianceMatrix(data) {
-      if (data.length < 2) {
-        console.warn("Not enough data points to calculate covariance matrix. Need at least 2.");
-        return null;
-      }
-
-      const n = data.length;
-      const mean = [
-        data.reduce((sum, vec) => sum + vec[0], 0) / n,
-        data.reduce((sum, vec) => sum + vec[1], 0) / n
-      ];
-
-      let covXX = 0;
-      let covXY = 0;
-      let covYY = 0;
-
-      for (let i = 0; i < n; i++) {
-        const diffX = data[i][0] - mean[0];
-        const diffY = data[i][1] - mean[1];
-        covXX += diffX * diffX;
-        covXY += diffX * diffY;
-        covYY += diffY * diffY;
-      }
-
-      // Using n-1 for sample covariance
-      return math.matrix([
-        [covXX / (n - 1), covXY / (n - 1)],
-        [covXY / (n - 1), covYY / (n - 1)]
-      ]);
-    }
-
-    // Function to load JSON data and initialize UMAP
+    // Function to load JSON data and prepare comment data
     async function loadJsonData() {
       studentAssessmentData = {
         "Mitarbeit": {
@@ -1506,8 +1476,7 @@
       // Initialize trait inputs (sliders) and collect all possible trait names
       initializeTraitInputs();
 
-      // Prepare data for UMAP
-      const allCommentVectors = [];
+      // Prepare comment data
       originalCommentData = []; // Clear previous data
 
       // Ensure sortedTraitNames is populated before processing comments
@@ -1526,7 +1495,7 @@
         }
       }
       sortedTraitNames = Array.from(allPossibleTraits).sort();
-      console.log('Sorted Trait Names for Vectorization:', sortedTraitNames);
+      console.log('Sorted Trait Names:', sortedTraitNames);
 
       for (const categoryKey in studentAssessmentData) {
         const category = studentAssessmentData[categoryKey];
@@ -1534,61 +1503,22 @@
           if (gradeKey !== 'datum') {
             const grade = category[gradeKey];
             grade.comments.forEach(comment => {
-              const vector6D = convertWeightsToVector(comment.weights);
-              allCommentVectors.push(vector6D);
               originalCommentData.push({
                 category: categoryKey,
                 grade: gradeKey,
-                comment: comment,
-                vector6D: vector6D // Store the original 6D vector
+                comment: comment
               });
             });
           }
         }
       }
 
-      if (allCommentVectors.length === 0) {
-        displayMessage("Keine Kommentare zum Trainieren des UMAP-Modells gefunden.", "error");
+      if (originalCommentData.length === 0) {
+        displayMessage("Keine Kommentare gefunden.", "error");
         return;
       }
 
-      // Initialize and train UMAP
-      umap = new UMAP.UMAP({
-        nComponents: 2, // Reduce to 2 dimensions
-        nNeighbors: Math.min(15, allCommentVectors.length - 1), // Max neighbors is data.length - 1
-        minDist: 0.1,
-        spread: 1.0,
-        // metric: 'euclidean' // UMAP uses Euclidean distance internally
-      });
-
-      try {
-        // Train UMAP model
-        umapReducedCommentVectors = await umap.fit(allCommentVectors);
-        console.log('UMAP-Modell erfolgreich trainiert. Reduzierte Vektoren (2D):', umapReducedCommentVectors);
-
-        // Calculate Covariance Matrix and its inverse for Mahalanobis Distance
-        const covMatrix = calculateCovarianceMatrix(umapReducedCommentVectors);
-        if (covMatrix) {
-          try {
-            inverseCovarianceMatrix = math.inv(covMatrix);
-            console.log('Inverse Kovarianzmatrix:', inverseCovarianceMatrix);
-          } catch (e) {
-            console.error("Could not compute inverse of covariance matrix. It might be singular.", e);
-            displayMessage("Fehler: Kovarianzmatrix ist singulär. Mahalanobis-Distanz nicht verfügbar.", "error");
-            inverseCovarianceMatrix = null;
-          }
-        } else {
-          displayMessage("Fehler: Kovarianzmatrix konnte nicht berechnet werden. Nicht genügend Daten oder Varianz.", "error");
-          inverseCovarianceMatrix = null;
-        }
-
-      } catch (error) {
-        console.error("Fehler beim Trainieren des UMAP-Modells:", error);
-        displayMessage("Fehler beim Trainieren des UMAP-Modells.", "error");
-        umap = null; // Reset UMAP if training fails
-        umapReducedCommentVectors = [];
-        inverseCovarianceMatrix = null;
-      }
+      console.log(`${originalCommentData.length} Kommentare geladen und bereit.`);
     }
 
     // Function to initialize trait inputs (sliders)
@@ -1745,11 +1675,11 @@
     }
 
     /**
-     * Generates suggestions based on UMAP dimensionality reduction and Mahalanobis distance.
+     * Generates suggestions based on masked Euclidean distance in trait space.
      */
     async function generateSuggestions() {
-      if (!umap || umapReducedCommentVectors.length === 0 || !inverseCovarianceMatrix) {
-        displayMessage("Modell ist nicht bereit. Bitte warten Sie, bis die Daten geladen und UMAP trainiert sind.", "error");
+      if (originalCommentData.length === 0) {
+        displayMessage("Daten werden noch geladen. Bitte warten.", "error");
         return;
       }
 
@@ -1762,24 +1692,11 @@
       }
 
       const userTraitInputs = getUserTraitInputs();
-      const userVector6D = convertWeightsToVector(userTraitInputs);
+      console.log('User Trait Inputs:', userTraitInputs);
 
-      let userVector2D;
-      try {
-        // Transform the single user input vector using the trained UMAP model
-        userVector2D = umap.transform([userVector6D])[0];
-        console.log('User Input 6D:', userVector6D);
-        console.log('User Input 2D (UMAP-reduced):', userVector2D);
-      } catch (error) {
-        console.error("Error transforming user input with UMAP:", error);
-        displayMessage("Fehler bei der UMAP-Transformation der Benutzereingabe.", "error");
-        return;
-      }
-
-      // Calculate Mahalanobis distance for all comments
-      const commentsWithDistance = originalCommentData.map((data, index) => {
-        const commentVector2D = umapReducedCommentVectors[index];
-        const distance = calculateMahalanobisDistance(userVector2D, commentVector2D, inverseCovarianceMatrix);
+      // Calculate masked Euclidean distance for all comments
+      const commentsWithDistance = originalCommentData.map(data => {
+        const distance = calculateMaskedDistance(userTraitInputs, data.comment.weights);
         return {
           ...data,
           distance: distance
@@ -1796,7 +1713,10 @@
       });
 
       const groupedSuggestions = {};
-      const DISTANCE_THRESHOLD = 3.0; // Max acceptable Mahalanobis distance
+      // Distance threshold: max normalized Euclidean distance (sqrt of avg squared diff)
+      // In a [-1,1] space, max possible distance per dimension is 2, so max normalized is 2
+      // We use 1.0 as threshold (roughly 50% of max range)
+      const DISTANCE_THRESHOLD = 1.0;
 
       for (const cat in categories) {
         // Sort comments within this category by distance (ascending)
@@ -1805,16 +1725,7 @@
         // Filter by distance and valence
         const filtered = categories[cat].filter(item => {
           if (item.distance > DISTANCE_THRESHOLD) return false;
-
-          // Check for strong valence mismatch (6D)
-          for (let i = 0; i < sortedTraitNames.length; i++) {
-            const userVal = userVector6D[i];
-            const itemVal = item.vector6D[i];
-            // If user is very negative and item is positive, or vice versa
-            if ((userVal < -0.5 && itemVal > 0.2) || (userVal > 0.5 && itemVal < -0.2)) {
-              return false;
-            }
-          }
+          if (hasValenceMismatch(userTraitInputs, item.comment.weights)) return false;
           return true;
         });
 
