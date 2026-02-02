@@ -529,7 +529,26 @@
     }
 
     /**
-     * Finds an alternative ASV text in the same category that matches a shifted trait profile.
+     * Calculates a "quality score" for a comment based on average of non-null weights.
+     * Higher score = more positive/better evaluation.
+     * @param {Object} weights - The comment's trait weights
+     * @returns {number} The quality score (average of non-null weights)
+     */
+    function calculateQualityScore(weights) {
+      let sum = 0;
+      let count = 0;
+      for (const trait of sortedTraitNames) {
+        const val = weights[trait];
+        if (val !== null && val !== undefined) {
+          sum += val;
+          count++;
+        }
+      }
+      return count > 0 ? sum / count : 0;
+    }
+
+    /**
+     * Finds an alternative ASV text in the same category with strictly higher/lower quality.
      * Used for the +/- buttons to find better or worse evaluations.
      * @param {Object} currentComment - The current comment object with weights
      * @param {string} category - The category to search within
@@ -538,20 +557,7 @@
      * @returns {Object|null} The alternative comment data or null if none found
      */
     function findAlternativeText(currentComment, category, direction, excludeCodes) {
-      const SHIFT_AMOUNT = 0.3; // How much to shift the weights per step
-
-      // Create shifted weights based on the current comment's weights
-      const shiftedWeights = {};
-      for (const trait of sortedTraitNames) {
-        const currentVal = currentComment.weights[trait];
-        if (currentVal !== null && currentVal !== undefined) {
-          // Shift in the direction (positive = better student, negative = worse student)
-          shiftedWeights[trait] = Math.max(-1, Math.min(1, currentVal + direction * SHIFT_AMOUNT));
-        } else {
-          // Use neutral for undefined traits in the search
-          shiftedWeights[trait] = 0;
-        }
-      }
+      const currentScore = calculateQualityScore(currentComment.weights);
 
       // Find all comments in the same category, excluding all specified codes
       const candidateComments = originalCommentData.filter(data =>
@@ -560,19 +566,30 @@
 
       if (candidateComments.length === 0) return null;
 
-      // Calculate distance from shifted weights for each candidate
-      const withDistances = candidateComments.map(data => ({
+      // Calculate quality score for each candidate and filter by direction
+      const withScores = candidateComments.map(data => ({
         ...data,
-        distance: calculateMaskedDistance(shiftedWeights, data.comment.weights)
+        qualityScore: calculateQualityScore(data.comment.weights)
       }));
 
-      // Sort by distance and return the closest
-      withDistances.sort((a, b) => a.distance - b.distance);
+      // Filter to only include texts with strictly higher/lower quality scores
+      const EPSILON = 0.001; // Small threshold to avoid floating point issues
+      let filtered;
+      if (direction > 0) {
+        // Looking for better (higher score)
+        filtered = withScores.filter(d => d.qualityScore > currentScore + EPSILON);
+        // Sort ascending by score to get the closest better option
+        filtered.sort((a, b) => a.qualityScore - b.qualityScore);
+      } else {
+        // Looking for worse (lower score)
+        filtered = withScores.filter(d => d.qualityScore < currentScore - EPSILON);
+        // Sort descending by score to get the closest worse option
+        filtered.sort((a, b) => b.qualityScore - a.qualityScore);
+      }
 
-      // Only return if the best match is reasonably close
-      if (withDistances[0].distance > 1.5) return null;
+      if (filtered.length === 0) return null;
 
-      return withDistances[0];
+      return filtered[0];
     }
 
     // Function to load JSON data and prepare comment data
