@@ -348,6 +348,28 @@
     .quality-btn.better:hover:not(:disabled) {
       background-color: #b8e6b8;
     }
+
+    .quality-btn.variant {
+      background-color: #e5e7eb;
+      color: #374151;
+    }
+
+    .quality-btn.variant:hover:not(:disabled) {
+      background-color: #d1d5db;
+    }
+
+    .slider:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    .slider:disabled::-webkit-slider-thumb {
+      background: #9ca3af;
+    }
+
+    .slider:disabled::-moz-range-thumb {
+      background: #9ca3af;
+    }
   </style>
 </head>
 
@@ -355,12 +377,16 @@
   <div id="messageBox" class="message-box"></div>
 
   <div class="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-lg">
-    <h1 class="text-3xl font-bold text-center text-gray-800 mb-8">Zeugnisbeurteilungen (Alpha)</h1>
+    <h1 class="text-3xl font-bold text-center text-gray-800 mb-2">Zeugnisbemerkungen (Alpha)</h1>
+    <p class="text-center text-xs text-gray-500 mb-8 max-w-2xl mx-auto">
+      Textbausteine: <span class="font-semibold">ASV-Textvorschläge für Berufliche Schulen, Bereich 2 „Verhalten und
+        Mitarbeit“, Stand 12.02.2026</span>. Der Wortlaut ist unverändert übernommen.
+      Ob ein Baustein im Einzelfall verwendet werden darf, entscheidet die Schulleitung.
+    </p>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
       <div>
-        <label for="lastName" class="block text-gray-700 text-sm font-semibold mb-2">Nachname der Schülerin / des
-          Schülers:</label>
+        <label for="lastName" class="block text-gray-700 text-sm font-semibold mb-2">Nachname:</label>
         <input type="text" id="lastName"
           class="shadow-sm appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-400"
           placeholder="z.B. Müller">
@@ -375,11 +401,57 @@
             class="flex-1 py-2 px-4 text-center toggle-button rounded-r-lg focus:outline-none focus:ring-2 focus:ring-blue-400">Weiblich</button>
         </div>
       </div>
+
+      <div>
+        <label for="addressStyle" class="block text-gray-700 text-sm font-semibold mb-2">Anredeform im Text:</label>
+        <select id="addressStyle"
+          class="shadow-sm border rounded-lg w-full py-2 px-3 text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-400">
+          <option value="name">Herr / Frau + Nachname</option>
+          <option value="role">Der Schüler / Die Schülerin</option>
+        </select>
+        <p class="text-xs text-gray-500 mt-1">Wird auf <em>alle</em> Sätze einheitlich angewendet.</p>
+      </div>
     </div>
 
-    <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">Gezeigte Eigenschaften</h2>
+    <div class="border border-gray-200 rounded-lg p-4 mb-8">
+      <label class="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-1 cursor-pointer">
+        <input type="checkbox" id="overallGradeEnabled">
+        <span>Notenbild insgesamt (Bauchgefühl)</span>
+      </label>
+      <p class="text-xs text-gray-500 mb-2">
+        Grobe Gesamteinschätzung über alle Fächer, keine Berechnung. Steuert
+        <span class="font-semibold">nicht</span> die Formulierung – Leistung und Verhalten werden getrennt
+        beurteilt. Dient nur der Prüfung auf Widersprüche und auf Bausteine außerhalb von Bereich 2.
+      </p>
+      <div class="slider-container flex items-center mb-1">
+        <input type="range" id="overallGrade" min="2" max="12" value="7" step="1"
+          class="slider flex-grow mr-3 neutral" disabled aria-label="Notenbild insgesamt">
+        <span id="overallGradeValue" class="text-gray-600 text-sm w-10 text-right">–</span>
+      </div>
+      <label class="flex items-start gap-2 text-sm text-gray-700 mt-3">
+        <input type="checkbox" id="varianceAcrossSubjects" class="mt-1">
+        <span>Leistungen variierten je Fach stark</span>
+      </label>
+      <div id="gradeSummary" class="text-sm text-gray-700 mt-2"></div>
+      <div id="gradeHints" class="mt-2 space-y-1"></div>
+    </div>
 
-    <div id="traitsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+    <h2 class="text-2xl font-bold text-gray-800 mb-2 text-center">Gezeigte Eigenschaften</h2>
+    <p class="text-sm text-gray-600 mb-6 text-center max-w-2xl mx-auto">
+      Nur <span class="font-semibold">angekreuzte</span> Dimensionen werden ausgewertet. Was Sie nicht belegen können,
+      bleibt „ohne Angabe“ – dazu entsteht dann auch keine Bemerkung.
+    </p>
+
+    <div id="traitsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+    </div>
+
+    <div class="border border-amber-200 bg-amber-50 rounded-lg p-4 mb-6">
+      <label class="flex items-start gap-2 text-sm text-gray-800">
+        <input type="checkbox" id="allowAufforderung" class="mt-1">
+        <span><span class="font-semibold">Aufforderung / Hinweis aufnehmen</span> („Mehr häuslicher Fleiß …“).
+          Nur bewusst setzen – solche Sätze fordern künftiges Verhalten und gehören daher in Zwischen- und
+          Jahreszeugnisse, nicht in ein Abschlusszeugnis.</span>
+      </label>
     </div>
 
     <div class="flex flex-col sm:flex-row gap-4 mb-8">
@@ -409,56 +481,134 @@
   <script>
     let studentAssessmentData; // Global variable to hold the JSON data
     const LOCAL_STORAGE_KEY = 'studentAssessments';
-    const MIN_SUGGESTIONS_PER_CATEGORY = 3; // Minimum suggestions to pick from each category
+    const MAX_SUGGESTIONS_PER_CATEGORY = 3; // Suggestions shown per category
 
     let originalCommentData = []; // Stores original comment objects along with their weights
     let sortedTraitNames = []; // To maintain a consistent order for traits
+    let bandCentroids = {};    // category -> { band: mean weight of its lead dimension }
+    let renderedCategories = {}; // category -> { contentDiv, headerTitle }, for in-place refresh
 
-    // Trait descriptions mapping
-    const traitDescriptions = {
+    // Categories that follow the ASV grade bands 1..6, with the dimension that carries the band.
+    const LEAD_DIMENSION = {
+      "Mitarbeit": "Mitarbeit",
+      "Verhalten": "Sozialverhalten"
+    };
+
+    // Fixed output order = order of the ASV catalogue (2.00 Mitarbeit, 2.10 Verhalten, 2.19
+    // Zusatzämter, 2.30 Aufforderung, 2.50 fachlich, 2.60 sozial, 2.70 Lernverhalten).
+    const CATEGORY_ORDER = [
+      "Mitarbeit", "Verhalten", "Aufforderung_und_Hinweise",
+      "Fachliche_und_kognitive_Kompetenz", "Soziale_Kompetenz", "Lernverhalten_Lernkompetenz"
+    ];
+
+    // Which rated dimension licenses a category, and in which direction.
+    // Measured over the catalogue: 2.50/2.60/2.70 contain only positively weighted Bausteine
+    // (Stärken), 2.30 only negatively weighted ones (Defizite). A category may therefore only
+    // be offered when the teacher rated a dimension it is actually about, in the matching
+    // direction — otherwise a text merely annotated on a side dimension gets suggested, which
+    // is how praise ended up next to a Notenstufe 5.
+    const CATEGORY_GATE = {
+      "Mitarbeit": { traits: ["Mitarbeit"], polarity: "graded" },
+      "Verhalten": { traits: ["Sozialverhalten"], polarity: "graded" },
+      "Aufforderung_und_Hinweise": { traits: ["Lernhaltung"], polarity: "negative" },
+      "Fachliche_und_kognitive_Kompetenz": { traits: ["Selbststaendigkeit"], polarity: "positive" },
+      "Soziale_Kompetenz": { traits: ["Sozialverhalten"], polarity: "positive" },
+      "Lernverhalten_Lernkompetenz": { traits: ["Lernhaltung", "Selbststaendigkeit"], polarity: "positive" }
+    };
+    const GATE_THRESHOLD = 0.3;
+
+    /** True if the teacher's ratings license suggestions from this category at all. */
+    function categoryIsApplicable(category, userWeights) {
+      const gate = CATEGORY_GATE[category];
+      if (!gate) return true; // Zusatzämter and anything unmapped are driven elsewhere
+      return gate.traits.some(trait => {
+        const val = userWeights[trait];
+        if (val === undefined) return false;                 // not rated -> no statement
+        if (gate.polarity === "positive") return val >= GATE_THRESHOLD;
+        if (gate.polarity === "negative") return val <= -GATE_THRESHOLD;
+        return true;                                          // graded: any rating is enough
+      });
+    }
+
+    // Trait metadata: display name, hint, and scale labels.
+    // Scale labels of graded dimensions name the ASV grade band they land in, so that the
+    // slider position is calibrated against the catalogue instead of an abstract "neutral".
+    const TRAIT_META = {
       "Mitarbeit": {
-        "-1.0": "Passiv zurückhaltend",
-        "-0.5": "Eher zurückhaltend",
-        "0.0": "Neutral",
-        "0.5": "Eher engagiert",
-        "1.0": "Hervorragend engagiert"
+        label: "Mitarbeit (Unterrichtsbeteiligung)",
+        hint: "Beteiligung am Unterrichtsgespräch, Beiträge, Einsatz — steuert Unterbereich 2.00.",
+        scale: {
+          "-1.0": "zu gering (Stufe 6)",
+          "-0.5": "schwankend / geringes Interesse (Stufe 5)",
+          "0.0": "angemessen (Stufe 4)",
+          "0.5": "befriedigend bis anerkennenswert (Stufe 3–2)",
+          "1.0": "hervorragend (Stufe 1)"
+        }
       },
       "Sozialverhalten": {
-        "-1.0": "Problematisch störend",
-        "-0.5": "Eher störend",
-        "0.0": "Neutral",
-        "0.5": "Eher sozial",
-        "1.0": "Vorbildlich sozial"
+        label: "Verhalten (Benehmen, Regeln)",
+        hint: "Umgangsformen und Einhaltung der Regeln — steuert Unterbereich 2.10.",
+        scale: {
+          "-1.0": "unangemessen (Stufe 6)",
+          "-0.5": "wiederholt zu beanstanden (Stufe 5)",
+          "0.0": "ordnungsgemäß (Stufe 4)",
+          "0.5": "einwandfrei bis lobenswert (Stufe 3–2)",
+          "1.0": "vorbildlich (Stufe 1)"
+        }
       },
       "Aktivitaetsniveau": {
-        "-1.0": "Unruhig störend",
-        "-0.5": "Eher unruhig",
-        "0.0": "Passiv zurückhaltend",
-        "0.5": "Eher aktiv arbeitend",
-        "1.0": "Angemessen aktiv"
+        label: "Arbeitsruhe (Unterrichtsstörungen)",
+        hint: "Nur Störungen: von „stört massiv“ bis „stört nicht“. Passivität gehört auf die Achse Mitarbeit.",
+        scale: {
+          "-1.0": "stört den Unterricht massiv",
+          "-0.5": "unruhig, muss ermahnt werden",
+          "0.0": "gelegentlich lebhaft",
+          "0.5": "keine Störungen",
+          "1.0": "trägt zur Arbeitsruhe bei"
+        }
       },
       "Lernhaltung": {
-        "-1.0": "Nachlässig gleichgültig",
-        "-0.5": "Eher gleichgültig",
-        "0.0": "Neutral",
-        "0.5": "Eher fleißig",
-        "1.0": "Fleißig zielstrebig"
+        label: "Lernhaltung (Fleiß, Sorgfalt)",
+        hint: "Arbeitseinsatz, Ausdauer, Sorgfalt, häusliche Vorbereitung — steuert Unterbereich 2.70.",
+        scale: {
+          "-1.0": "nachlässig, gleichgültig",
+          "-0.5": "wenig Sorgfalt und Einsatz",
+          "0.0": "durchschnittlicher Einsatz",
+          "0.5": "fleißig",
+          "1.0": "sehr fleißig und zielstrebig"
+        }
       },
       "Aufmerksamkeit": {
-        "-1.0": "Desinteressiert abgelenkt",
-        "-0.5": "Eher ablenkbar",
-        "0.0": "Neutral",
-        "0.5": "Eher interessiert",
-        "1.0": "Interessiert fokussiert"
+        label: "Aufmerksamkeit",
+        hint: "Konzentration und Interesse im Unterricht.",
+        scale: {
+          "-1.0": "desinteressiert, abgelenkt",
+          "-0.5": "leicht ablenkbar",
+          "0.0": "meist aufmerksam",
+          "0.5": "interessiert",
+          "1.0": "durchgehend konzentriert"
+        }
       },
       "Selbststaendigkeit": {
-        "-1.0": "Unselbstständig abhängig",
-        "-0.5": "Eher unselbstständig",
-        "0.0": "Neutral",
-        "0.5": "Eher eigenverantwortlich",
-        "1.0": "Eigenverantwortlich selbstständig"
+        label: "Selbstständigkeit",
+        hint: "Eigenverantwortliches Arbeiten, Problemlösen — steuert Unterbereiche 2.50 / 2.70.",
+        scale: {
+          "-1.0": "unselbstständig, braucht ständige Anleitung",
+          "-0.5": "eher unselbstständig",
+          "0.0": "arbeitet nach Anleitung",
+          "0.5": "eigenverantwortlich",
+          "1.0": "durchgehend selbstständig"
+        }
       }
     };
+
+    // Bausteine, die ausdrücklich schwankende statt gleichbleibender Leistung beschreiben.
+    // Sie liegen sämtlich in den unteren Notenstufen — deshalb darf der Streuungs-Schalter
+    // die Einstufung nicht verändern, sondern innerhalb der gewählten Stufe nur umsortieren.
+    const VARIANCE_CODES = new Set(['a204b', 'a205', 'a205c']);
+
+    // Unterbereich 2.19 (Zusatzämter, a219–a221, a229) und die Tatsachenbausteine a217/a218
+    // fehlen hier absichtlich: sie werden bei der Zeugniserstellung ohnehin automatisch gesetzt.
 
     /**
      * Displays a message in a floating box.
@@ -477,62 +627,99 @@
     }
 
     /**
-     * Calculates masked Euclidean distance between user input and a comment's weights.
-     * Only compares dimensions where the comment has non-null values.
-     * This properly handles sparse trait annotations.
-     * @param {Object} userWeights - User's trait values (all defined, -1 to 1).
+     * Masked Euclidean distance over the dimensions that the teacher actually rated AND the
+     * comment actually annotates. Unrated dimensions carry no information and must not be
+     * treated as a claim of "average" — that is what made an untouched form produce negative
+     * Bemerkungen. Returns Infinity when the comment says nothing about anything rated.
+     * @param {Object} userWeights - Rated trait values only (-1 to 1).
      * @param {Object} commentWeights - Comment's trait weights (may have nulls).
      * @returns {number} The normalized Euclidean distance.
      */
     function calculateMaskedDistance(userWeights, commentWeights) {
       let sumSquaredDiff = 0;
       let validDimensions = 0;
-      
+
       for (const trait of sortedTraitNames) {
         const userVal = userWeights[trait];
         const commentVal = commentWeights[trait];
-        
-        // Skip if comment has null/undefined for this trait
-        if (commentVal === null || commentVal === undefined) continue;
-        
+
+        if (userVal === undefined) continue;                        // not rated by the teacher
+        if (commentVal === null || commentVal === undefined) continue; // not annotated on the text
+
         const diff = userVal - commentVal;
         sumSquaredDiff += diff * diff;
         validDimensions++;
       }
-      
-      // Normalize by number of valid dimensions to make distances comparable
+
       if (validDimensions === 0) return Infinity;
       return Math.sqrt(sumSquaredDiff / validDimensions);
     }
 
     /**
-     * Checks for strong valence mismatch between user input and comment.
-     * Returns true if there's a problematic mismatch.
-     * @param {Object} userWeights - User's trait values.
+     * Blocks texts that contradict the teacher's rating in sign. Symmetric in both directions,
+     * so a positive rating can no longer be answered with a negative Baustein or vice versa.
+     * @param {Object} userWeights - Rated trait values only.
      * @param {Object} commentWeights - Comment's trait weights.
      * @returns {boolean} True if valence mismatch detected.
      */
     function hasValenceMismatch(userWeights, commentWeights) {
+      const SIGNIFICANT = 0.3;
       for (const trait of sortedTraitNames) {
         const userVal = userWeights[trait];
         const commentVal = commentWeights[trait];
 
-        // Skip null values in comment
+        if (userVal === undefined) continue;
         if (commentVal === null || commentVal === undefined) continue;
 
-        // If user is very negative and item is positive, or vice versa
-        if ((userVal < -0.5 && commentVal > 0.2) || (userVal > 0.5 && commentVal < -0.2)) {
-          return true;
-        }
+        if (userVal >= SIGNIFICANT && commentVal <= -SIGNIFICANT) return true;
+        if (userVal <= -SIGNIFICANT && commentVal >= SIGNIFICANT) return true;
       }
       return false;
     }
 
     /**
-     * Calculates a "quality score" for a comment based on average of non-null weights.
-     * Higher score = more positive/better evaluation.
-     * @param {Object} weights - The comment's trait weights
-     * @returns {number} The quality score (average of non-null weights)
+     * Mean weight of a category's lead dimension per ASV grade band, computed from the data.
+     * This is the calibration curve between the slider scale and the catalogue's bands.
+     */
+    function computeBandCentroids() {
+      bandCentroids = {};
+      for (const category in LEAD_DIMENSION) {
+        const lead = LEAD_DIMENSION[category];
+        bandCentroids[category] = {};
+        for (const data of originalCommentData) {
+          if (data.category !== category) continue;
+          const band = parseInt(data.grade, 10);
+          if (isNaN(band)) continue;
+          const val = data.comment.weights[lead];
+          if (val === null || val === undefined) continue;
+          (bandCentroids[category][band] ||= []).push(val);
+        }
+        for (const band in bandCentroids[category]) {
+          const vals = bandCentroids[category][band];
+          bandCentroids[category][band] = vals.reduce((a, b) => a + b, 0) / vals.length;
+        }
+      }
+    }
+
+    /**
+     * Maps a rating on a category's lead dimension to the closest ASV grade band.
+     * @returns {number|null} Band 1..6, or null if the lead dimension was not rated.
+     */
+    function impliedBand(category, userWeights) {
+      const lead = LEAD_DIMENSION[category];
+      if (!lead || !bandCentroids[category] || userWeights[lead] === undefined) return null;
+      const userVal = userWeights[lead];
+      let best = null, bestDist = Infinity;
+      for (const band in bandCentroids[category]) {
+        const dist = Math.abs(userVal - bandCentroids[category][band]);
+        if (dist < bestDist) { bestDist = dist; best = parseInt(band, 10); }
+      }
+      return best;
+    }
+
+    /**
+     * Average of the non-null weights. Only used to order the categories that have no ASV
+     * grade bands (2.50 / 2.60 / 2.70) — for the graded ones the band itself is authoritative.
      */
     function calculateQualityScore(weights) {
       let sum = 0;
@@ -548,55 +735,66 @@
     }
 
     /**
-     * Finds an alternative ASV text in the same category with strictly higher/lower quality.
-     * Used for the +/- buttons to find better or worse evaluations.
-     * @param {Object} currentComment - The current comment object with weights
-     * @param {string} category - The category to search within
-     * @param {number} direction - +1 for better student, -1 for worse student
-     * @param {Array<string>} excludeCodes - Array of comment codes to exclude from results
+     * Next ASV grade band in the given direction that actually has texts.
+     * "+" means the student is better than the wording on screen, and band 1 is the best
+     * grade, so a "+" walks downwards in band number.
+     * @param {string} category - A graded category
+     * @param {number} fromBand - The band the teacher is judging against
+     * @param {number} direction - +1 better, -1 worse
+     * @returns {number|null} The neighbouring band, or null at the end of the scale
+     */
+    function nextBandWithTexts(category, fromBand, direction) {
+      const step = direction > 0 ? -1 : 1;
+      for (let band = fromBand + step; band >= 1 && band <= 6; band += step) {
+        if (originalCommentData.some(d => d.category === category && parseInt(d.grade, 10) === band)) {
+          return band;
+        }
+      }
+      return null;
+    }
+
+    /**
+     * Neighbouring text for +/- in the categories that have no ASV grade bands (2.50/2.60/2.70).
+     * There the averaged annotation weight is the only available severity proxy. Graded
+     * categories do not come through here — for them "+" corrects the estimate itself.
+     * @param {Object} currentData - The currently displayed {category, grade, comment}
+     * @param {number} direction - +1 for a stronger statement, -1 for a more reserved one
+     * @param {Array<string>} excludeCodes - Codes already displayed in this category
      * @returns {Object|null} The alternative comment data or null if none found
      */
-    function findAlternativeText(currentComment, category, direction, excludeCodes) {
-      const currentScore = calculateQualityScore(currentComment.weights);
+    function findAlternativeText(currentData, direction, excludeCodes) {
+      const inCategory = originalCommentData.filter(d => d.category === currentData.category);
+      const currentScore = calculateQualityScore(currentData.comment.weights);
+      const EPSILON = 0.001;
+      const scored = inCategory
+        .filter(d => !excludeCodes.includes(d.comment.code))
+        .map(d => ({ ...d, qualityScore: calculateQualityScore(d.comment.weights) }));
+      const filtered = direction > 0
+        ? scored.filter(d => d.qualityScore > currentScore + EPSILON).sort((a, b) => a.qualityScore - b.qualityScore)
+        : scored.filter(d => d.qualityScore < currentScore - EPSILON).sort((a, b) => b.qualityScore - a.qualityScore);
+      return filtered.length ? filtered[0] : null;
+    }
 
-      // Find all comments in the same category, excluding all specified codes
-      const candidateComments = originalCommentData.filter(data =>
-        data.category === category && !excludeCodes.includes(data.comment.code)
-      );
-
-      if (candidateComments.length === 0) return null;
-
-      // Calculate quality score for each candidate and filter by direction
-      const withScores = candidateComments.map(data => ({
-        ...data,
-        qualityScore: calculateQualityScore(data.comment.weights)
-      }));
-
-      // Filter to only include texts with strictly higher/lower quality scores
-      const EPSILON = 0.001; // Small threshold to avoid floating point issues
-      let filtered;
-      if (direction > 0) {
-        // Looking for better (higher score)
-        filtered = withScores.filter(d => d.qualityScore > currentScore + EPSILON);
-        // Sort ascending by score to get the closest better option
-        filtered.sort((a, b) => a.qualityScore - b.qualityScore);
-      } else {
-        // Looking for worse (lower score)
-        filtered = withScores.filter(d => d.qualityScore < currentScore - EPSILON);
-        // Sort descending by score to get the closest worse option
-        filtered.sort((a, b) => b.qualityScore - a.qualityScore);
-      }
-
-      if (filtered.length === 0) return null;
-
-      return filtered[0];
+    /**
+     * Finds another wording at the same level, so a whole class does not receive the identical
+     * sentence. Prefers the same ASV grade band; in ungraded categories any unused text.
+     */
+    function findVariantText(currentData, excludeCodes, userWeights) {
+      const sameBand = originalCommentData.filter(d =>
+        d.category === currentData.category &&
+        d.grade === currentData.grade &&
+        !excludeCodes.includes(d.comment.code));
+      if (!sameBand.length) return null;
+      return sameBand
+        .map(d => ({ ...d, distance: calculateMaskedDistance(userWeights, d.comment.weights) }))
+        .sort((a, b) => (a.distance === b.distance ? 0 : (a.distance < b.distance ? -1 : 1)))[0];
     }
 
     // Function to load JSON data and prepare comment data
     async function loadJsonData() {
       studentAssessmentData = {
         "Mitarbeit": {
-          "datum": "2025-05-20",
+          "datum": "2026-02-12",
           "1": {
             "comments": [
               {
@@ -672,7 +870,7 @@
                 "code": "a202a",
                 "text": "[Schüler/Schülerin] zeigte großes Interesse und sicheres Urteilsvermögen.",
                 "weights": {
-                  "Mitarbeit": 0.3,
+                  "Mitarbeit": 0.6,
                   "Sozialverhalten": null,
                   "Aktivitaetsniveau": null,
                   "Lernhaltung": 0.7,
@@ -687,7 +885,7 @@
                 "weights": {
                   "Mitarbeit": 0.8,
                   "Sozialverhalten": null,
-                  "Aktivitaetsniveau": 0.0,
+                  "Aktivitaetsniveau": null,
                   "Lernhaltung": 0.6,
                   "Aufmerksamkeit": 0.5,
                   "Selbststaendigkeit": 0.3
@@ -756,7 +954,7 @@
                 "weights": {
                   "Mitarbeit": 0.4,
                   "Sozialverhalten": null,
-                  "Aktivitaetsniveau": 0.0,
+                  "Aktivitaetsniveau": null,
                   "Lernhaltung": null,
                   "Aufmerksamkeit": 0.2,
                   "Selbststaendigkeit": 0.2
@@ -784,9 +982,9 @@
                 "code": "a204a",
                 "text": "[Schüler/Schülerin] folgte dem Unterricht meist aufmerksam, sollte sich jedoch aktiver in das Unterrichtsgeschehen einbringen.",
                 "weights": {
-                  "Mitarbeit": 0.0,
+                  "Mitarbeit": 0.1,
                   "Sozialverhalten": null,
-                  "Aktivitaetsniveau": 0.0,
+                  "Aktivitaetsniveau": null,
                   "Lernhaltung": null,
                   "Aufmerksamkeit": 0.4,
                   "Selbststaendigkeit": null
@@ -797,11 +995,11 @@
                 "code": "a204b",
                 "text": "[Schüler/Schülerin] arbeitete mit wechselndem Interesse und Einsatz im Unterricht mit.",
                 "weights": {
-                  "Mitarbeit": -0.3,
+                  "Mitarbeit": 0.0,
                   "Sozialverhalten": null,
                   "Aktivitaetsniveau": null,
-                  "Lernhaltung": -0.4,
-                  "Aufmerksamkeit": -0.4,
+                  "Lernhaltung": -0.3,
+                  "Aufmerksamkeit": -0.3,
                   "Selbststaendigkeit": null
                 },
                 "reason": "'Wechselndes Interesse und Einsatz' negatively impacts Mitarbeit, Lernhaltung, and Aufmerksamkeit, indicating inconsistency."
@@ -810,7 +1008,7 @@
                 "code": "a204c",
                 "text": "[Schüler/Schülerin] arbeitete zufriedenstellend mit.",
                 "weights": {
-                  "Mitarbeit": 0.3,
+                  "Mitarbeit": 0.2,
                   "Sozialverhalten": null,
                   "Aktivitaetsniveau": null,
                   "Lernhaltung": null,
@@ -902,7 +1100,7 @@
                 "weights": {
                   "Mitarbeit": 0.2,
                   "Sozialverhalten": null,
-                  "Aktivitaetsniveau": 0.0,
+                  "Aktivitaetsniveau": 0.5,
                   "Lernhaltung": 0.3,
                   "Aufmerksamkeit": 0.9,
                   "Selbststaendigkeit": null
@@ -913,7 +1111,7 @@
           }
         },
         "Verhalten": {
-          "datum": "2025-05-20",
+          "datum": "2026-02-12",
           "1": {
             "comments": [
               {
@@ -990,7 +1188,7 @@
                 "text": "[Sein/Ihr] tadelloses Benehmen brachte [ihm/ihr] Anerkennung und große Wertschätzung ein.",
                 "weights": {
                   "Mitarbeit": null,
-                  "Sozialverhalten": 0.9,
+                  "Sozialverhalten": 0.8,
                   "Aktivitaetsniveau": 0.7,
                   "Lernhaltung": null,
                   "Aufmerksamkeit": null,
@@ -1089,7 +1287,7 @@
                 "text": "Das Verhalten war zufriedenstellend.",
                 "weights": {
                   "Mitarbeit": null,
-                  "Sozialverhalten": 0.3,
+                  "Sozialverhalten": 0.2,
                   "Aktivitaetsniveau": null,
                   "Lernhaltung": null,
                   "Aufmerksamkeit": null,
@@ -1115,7 +1313,7 @@
                 "text": "Das Verhalten war im Allgemeinen ordentlich und anständig.",
                 "weights": {
                   "Mitarbeit": null,
-                  "Sozialverhalten": 0.4,
+                  "Sozialverhalten": 0.25,
                   "Aktivitaetsniveau": null,
                   "Lernhaltung": null,
                   "Aufmerksamkeit": null,
@@ -1128,7 +1326,7 @@
                 "text": "Das Verhalten war ordnungsgemäß.",
                 "weights": {
                   "Mitarbeit": null,
-                  "Sozialverhalten": 0.4,
+                  "Sozialverhalten": 0.25,
                   "Aktivitaetsniveau": null,
                   "Lernhaltung": null,
                   "Aufmerksamkeit": null,
@@ -1145,7 +1343,7 @@
                 "text": "Das Verhalten war nicht immer einwandfrei.",
                 "weights": {
                   "Mitarbeit": null,
-                  "Sozialverhalten": -0.5,
+                  "Sozialverhalten": -0.35,
                   "Aktivitaetsniveau": -0.3,
                   "Lernhaltung": null,
                   "Aufmerksamkeit": -0.2,
@@ -1158,7 +1356,7 @@
                 "text": "Das Verhalten musste wiederholt beanstandet werden.",
                 "weights": {
                   "Mitarbeit": -0.1,
-                  "Sozialverhalten": -0.8,
+                  "Sozialverhalten": -0.5,
                   "Aktivitaetsniveau": -0.6,
                   "Lernhaltung": null,
                   "Aufmerksamkeit": -0.5,
@@ -1171,7 +1369,7 @@
                 "text": "[Er/Sie] ließ sich leicht ablenken und störte den Unterricht.",
                 "weights": {
                   "Mitarbeit": -0.4,
-                  "Sozialverhalten": -0.9,
+                  "Sozialverhalten": -0.6,
                   "Aktivitaetsniveau": -0.9,
                   "Lernhaltung": null,
                   "Aufmerksamkeit": -0.9,
@@ -1184,7 +1382,7 @@
                 "text": "[Er/Sie] war sehr unruhig und musste des Öfteren ermahnt werden.",
                 "weights": {
                   "Mitarbeit": -0.2,
-                  "Sozialverhalten": -0.7,
+                  "Sozialverhalten": -0.5,
                   "Aktivitaetsniveau": -1.0,
                   "Lernhaltung": null,
                   "Aufmerksamkeit": -0.6,
@@ -1201,7 +1399,7 @@
                 "text": "Das Verhalten war unangemessen.",
                 "weights": {
                   "Mitarbeit": -0.3,
-                  "Sozialverhalten": -1.0,
+                  "Sozialverhalten": -0.9,
                   "Aktivitaetsniveau": -0.8,
                   "Lernhaltung": null,
                   "Aufmerksamkeit": -0.7,
@@ -1213,7 +1411,7 @@
           }
         },
         "Aufforderung_und_Hinweise": {
-          "datum": "2025-05-20",
+          "datum": "2026-02-12",
           "other": {
             "comments": [
               {
@@ -1246,7 +1444,7 @@
           }
         },
         "Fachliche_und_kognitive_Kompetenz": {
-          "datum": "2025-05-20",
+          "datum": "2026-02-12",
           "other": {
             "comments": [
               {
@@ -1370,7 +1568,7 @@
           }
         },
         "Soziale_Kompetenz": {
-          "datum": "2025-05-20",
+          "datum": "2026-02-12",
           "other": {
             "comments": [
               {
@@ -1379,7 +1577,7 @@
                 "weights": {
                   "Mitarbeit": 0.3,
                   "Sozialverhalten": 0.9,
-                  "Aktivitaetsniveau": 0.7,
+                  "Aktivitaetsniveau": null,
                   "Lernhaltung": null,
                   "Aufmerksamkeit": null,
                   "Selbststaendigkeit": null
@@ -1392,7 +1590,7 @@
                 "weights": {
                   "Mitarbeit": 0.8,
                   "Sozialverhalten": 0.8,
-                  "Aktivitaetsniveau": 0.7,
+                  "Aktivitaetsniveau": null,
                   "Lernhaltung": null,
                   "Aufmerksamkeit": null,
                   "Selbststaendigkeit": null
@@ -1405,7 +1603,7 @@
                 "weights": {
                   "Mitarbeit": 0.7,
                   "Sozialverhalten": 0.7,
-                  "Aktivitaetsniveau": 0.6,
+                  "Aktivitaetsniveau": null,
                   "Lernhaltung": 0.8,
                   "Aufmerksamkeit": null,
                   "Selbststaendigkeit": null
@@ -1418,7 +1616,7 @@
                 "weights": {
                   "Mitarbeit": 0.1,
                   "Sozialverhalten": 0.9,
-                  "Aktivitaetsniveau": 0.7,
+                  "Aktivitaetsniveau": null,
                   "Lernhaltung": null,
                   "Aufmerksamkeit": null,
                   "Selbststaendigkeit": null
@@ -1444,7 +1642,7 @@
                 "weights": {
                   "Mitarbeit": 0.9,
                   "Sozialverhalten": 0.8,
-                  "Aktivitaetsniveau": 0.7,
+                  "Aktivitaetsniveau": null,
                   "Lernhaltung": null,
                   "Aufmerksamkeit": null,
                   "Selbststaendigkeit": null
@@ -1457,7 +1655,7 @@
                 "weights": {
                   "Mitarbeit": 0.2,
                   "Sozialverhalten": 0.9,
-                  "Aktivitaetsniveau": 0.6,
+                  "Aktivitaetsniveau": null,
                   "Lernhaltung": null,
                   "Aufmerksamkeit": null,
                   "Selbststaendigkeit": 0.3
@@ -1470,7 +1668,7 @@
                 "weights": {
                   "Mitarbeit": 0.3,
                   "Sozialverhalten": 1.0,
-                  "Aktivitaetsniveau": 0.8,
+                  "Aktivitaetsniveau": null,
                   "Lernhaltung": null,
                   "Aufmerksamkeit": null,
                   "Selbststaendigkeit": 0.2
@@ -1483,7 +1681,7 @@
                 "weights": {
                   "Mitarbeit": 0.4,
                   "Sozialverhalten": 0.9,
-                  "Aktivitaetsniveau": 0.6,
+                  "Aktivitaetsniveau": null,
                   "Lernhaltung": 0.1,
                   "Aufmerksamkeit": null,
                   "Selbststaendigkeit": 0.2
@@ -1494,7 +1692,7 @@
           }
         },
         "Lernverhalten_Lernkompetenz": {
-          "datum": "2025-05-20",
+          "datum": "2026-02-12",
           "other": {
             "comments": [
               {
@@ -1626,7 +1824,94 @@
         return;
       }
 
+      computeBandCentroids();
+      updateGradeSummary();
+
       console.log(`${originalCommentData.length} Kommentare geladen und bereit.`);
+      console.log('Notenstufen-Zentroide:', bandCentroids);
+    }
+
+    // ---------------------------------------------------------------------------------------
+    // Fachnoten
+    //
+    // The subject grades are evidence about Leistung, not about Mitarbeit or Verhalten, and the
+    // Bereich-2 catalogue contains no Leistungsaussage at all — "gute Leistungen" appears in
+    // none of its 69 Bausteine. They are therefore deliberately kept out of text ranking and
+    // used for three things instead: spotting the spread across subjects, flagging the parts of
+    // the catalogue that grades really do drive (Bereich 5/6/7, a227/a228 — not yet in this
+    // app), and warning when the Notenbild and the Mitarbeit rating contradict each other.
+    // ---------------------------------------------------------------------------------------
+
+    /** @returns {number|null} The overall impression on the 1.0–6.0 scale, or null if not given. */
+    function getOverallGrade() {
+      const enable = document.getElementById('overallGradeEnabled');
+      const slider = document.getElementById('overallGrade');
+      if (!enable || !slider || !enable.checked) return null;
+      return parseInt(slider.value, 10) / 2; // 2..12 -> 1.0..6.0 in Schritten von 0,5
+    }
+
+    function renderHint(container, tone, text) {
+      const styles = {
+        info: 'bg-blue-50 border-blue-200 text-blue-900',
+        warn: 'bg-amber-50 border-amber-200 text-amber-900'
+      };
+      const p = document.createElement('p');
+      p.className = `text-xs border rounded-md px-2 py-1 ${styles[tone]}`;
+      p.textContent = text;
+      container.appendChild(p);
+    }
+
+    function updateGradeSummary() {
+      const summaryEl = document.getElementById('gradeSummary');
+      const hintsEl = document.getElementById('gradeHints');
+      const slider = document.getElementById('overallGrade');
+      const valueEl = document.getElementById('overallGradeValue');
+      const enable = document.getElementById('overallGradeEnabled');
+      if (!summaryEl || !hintsEl || !slider || !valueEl || !enable) return;
+      hintsEl.innerHTML = '';
+
+      const grade = getOverallGrade();
+      slider.disabled = !enable.checked;
+      slider.classList.remove('negative', 'neutral', 'positive');
+      slider.classList.add(grade === null ? 'neutral' : grade <= 2.5 ? 'positive' : grade >= 4.5 ? 'negative' : 'neutral');
+      valueEl.textContent = grade === null ? '–' : grade.toFixed(1);
+
+      const variance = document.getElementById('varianceAcrossSubjects').checked;
+
+      if (grade === null) {
+        summaryEl.textContent = 'Ohne Angabe — die Bausteine hängen ohnehin nicht davon ab.';
+      } else {
+        summaryEl.textContent = `Gesamtbild etwa ${grade.toFixed(1)}.`;
+        if (grade >= 5) {
+          renderHint(hintsEl, 'warn',
+            'Bei diesem Notenbild Gefährdung bzw. Klassenziel prüfen (ASV-Bereich 6, a610–a615). '
+            + 'Diese Bausteine sind in dieser App noch nicht enthalten.');
+        }
+        if (grade <= 1.5) {
+          renderHint(hintsEl, 'info',
+            'Sehr gutes Notenbild: a228 (Anerkennungsurkunde der Regierung) und a227 (Verkürzung der '
+            + 'Ausbildungszeit) prüfen — in dieser App noch nicht enthalten.');
+        }
+      }
+
+      // Only the teacher knows whether the spread came from effort — then it belongs in the
+      // Bemerkung — or from aptitude in single subjects, in which case it does not.
+      if (variance) {
+        renderHint(hintsEl, 'info',
+          'Schwankungs-Bausteine werden bevorzugt, sofern es sie auf der gewählten Notenstufe gibt '
+          + '(a204b, a205, a205c). Lag die Streuung an fachspezifischer Begabung statt am Einsatz, '
+          + 'gehört sie nicht in die Bemerkung, sondern nur ins Notenbild.');
+      }
+
+      // Leistung and Mitarbeit may legitimately diverge, but a large gap is the kind of thing
+      // that gets questioned later, so it should be a conscious decision with notes to back it.
+      const mitarbeitBand = impliedBand('Mitarbeit', getUserTraitInputs());
+      if (grade !== null && mitarbeitBand !== null && Math.abs(mitarbeitBand - grade) >= 2) {
+        renderHint(hintsEl, 'warn',
+          `Gesamtbild ${grade.toFixed(1)}, Mitarbeit aber als Notenstufe ${mitarbeitBand} bewertet. `
+          + 'Das ist zulässig — Leistung und Mitarbeit sind getrennt zu beurteilen — aber '
+          + 'erklärungsbedürftig. Beobachtungen dazu sollten dokumentiert sein.');
+      }
     }
 
     // Function to initialize trait inputs (sliders)
@@ -1663,77 +1948,89 @@
 
       sortedTraitNames.forEach(trait => {
         const traitId = trait.replace(/[^a-zA-Z0-9]/g, '_'); // Sanitize trait name for ID
+        const meta = TRAIT_META[trait] || { label: trait.replace(/_/g, ' '), hint: '', scale: {} };
 
         const div = document.createElement('div');
-        div.className = 'flex flex-col';
+        div.className = 'flex flex-col border border-gray-200 rounded-lg p-3';
 
-        const label = document.createElement('label');
-        label.htmlFor = traitId;
-        label.className = `block text-sm font-semibold mb-2 label-${traitId}`; // Add class for color
-        label.textContent = trait.replace(/_/g, ' '); // Display trait name nicely
+        // "bewerten" checkbox: unchecked means "ohne Angabe" and excludes the dimension.
+        const head = document.createElement('label');
+        head.className = 'flex items-center gap-2 text-sm font-semibold text-gray-700 mb-1 cursor-pointer';
+        const enable = document.createElement('input');
+        enable.type = 'checkbox';
+        enable.id = `${traitId}Enabled`;
+        enable.className = 'trait-enable';
+        enable.dataset.trait = trait;
+        const headText = document.createElement('span');
+        headText.textContent = meta.label;
+        head.appendChild(enable);
+        head.appendChild(headText);
+
+        const hint = document.createElement('p');
+        hint.className = 'text-xs text-gray-500 mb-2';
+        hint.textContent = meta.hint;
 
         const sliderDiv = document.createElement('div');
-        sliderDiv.className = 'slider-container flex items-center mb-2'; // Added mb-2 for spacing
+        sliderDiv.className = 'slider-container flex items-center mb-1';
 
         const slider = document.createElement('input');
         slider.type = 'range';
         slider.id = traitId; // Use sanitized trait name as ID
         slider.min = -10; // Corresponds to -1.0
         slider.max = 10;  // Corresponds to 1.0
-        slider.value = 0; // Corresponds to 0.0 (neutral)
+        slider.value = 0;
         slider.step = 1;  // Corresponds to 0.1 increments
-        slider.className = 'slider flex-grow mr-3 neutral'; // Initial class for neutral color
+        slider.className = 'slider flex-grow mr-3 neutral';
+        slider.disabled = true;
+        slider.setAttribute('aria-label', meta.label);
 
         const valueDisplay = document.createElement('span');
         valueDisplay.id = `${traitId}Value`;
         valueDisplay.className = 'text-gray-600 text-sm w-10 text-right';
-        valueDisplay.textContent = (slider.value / 10).toFixed(1); // Display initial value
 
         const descriptionDisplay = document.createElement('span');
         descriptionDisplay.id = `${traitId}Description`;
-        descriptionDisplay.className = 'text-gray-500 text-xs mt-1 w-full text-center'; // Text below slider
-        descriptionDisplay.textContent = traitDescriptions[trait] ? traitDescriptions[trait]["0.0"] : '';
+        descriptionDisplay.className = 'text-gray-500 text-xs w-full text-center';
 
-        slider.oninput = function () {
-          const currentValue = parseFloat(this.value) / 10;
+        const render = () => {
+          const active = enable.checked;
+          slider.disabled = !active;
+          div.classList.toggle('opacity-60', !active);
+
+          if (!active) {
+            valueDisplay.textContent = '–';
+            descriptionDisplay.textContent = 'ohne Angabe';
+            slider.classList.remove('negative', 'positive');
+            slider.classList.add('neutral');
+            return;
+          }
+
+          const currentValue = parseFloat(slider.value) / 10;
           valueDisplay.textContent = currentValue.toFixed(1);
 
-          // Update slider color based on value
-          this.classList.remove('negative', 'neutral', 'positive');
-          if (currentValue < 0) {
-            this.classList.add('negative');
-          } else if (currentValue > 0) {
-            this.classList.add('positive');
-          } else {
-            this.classList.add('neutral');
-          }
+          slider.classList.remove('negative', 'neutral', 'positive');
+          if (currentValue < 0) slider.classList.add('negative');
+          else if (currentValue > 0) slider.classList.add('positive');
+          else slider.classList.add('neutral');
 
-          // Update description
-          if (traitDescriptions[trait]) {
-            if (currentValue == 0) {
-              descriptionDisplay.textContent = traitDescriptions[trait]["0.0"];
-            } else {
-              // Only show exactly 0.0 as "Neutral"
-              let idx = (Math.round(currentValue * 2) / 2).toFixed(1);
-              if (idx == 0) {
-                idx = 0.5; // For -0.1 to -0.7, use -0.5; for 0.1 to 0.7, use 0.5
-                if (currentValue < 0) {
-                  idx *= -1;
-                }
-              }
-              // Update label according to description
-              descriptionDisplay.textContent = traitDescriptions[trait][idx.toString()];
-            }
-          }
+          // Snap to the nearest of the five described anchor points for the caption.
+          const anchor = (Math.round(currentValue * 2) / 2).toFixed(1);
+          descriptionDisplay.textContent = meta.scale[anchor] || '';
         };
-        // Initial color and description update
-        slider.oninput();
+
+        // Re-check the Notenbild too: the discrepancy warning depends on the Mitarbeit rating.
+        const renderAndCheck = () => { render(); updateGradeSummary(); };
+        slider.oninput = renderAndCheck;
+        // Moving a disabled-looking slider is a dead end, so ticking the box is the way in.
+        enable.onchange = renderAndCheck;
+        render();
 
         sliderDiv.appendChild(slider);
         sliderDiv.appendChild(valueDisplay);
-        div.appendChild(label);
+        div.appendChild(head);
+        div.appendChild(hint);
         div.appendChild(sliderDiv);
-        div.appendChild(descriptionDisplay); // Append description below slider
+        div.appendChild(descriptionDisplay);
         traitsContainer.appendChild(div);
       });
     }
@@ -1744,11 +2041,33 @@
     document.getElementById('genderMale').addEventListener('click', function () {
       this.classList.add('active');
       document.getElementById('genderFemale').classList.remove('active');
+      refreshRenderedSuggestions();
     });
 
     document.getElementById('genderFemale').addEventListener('click', function () {
       this.classList.add('active');
       document.getElementById('genderMale').classList.remove('active');
+      refreshRenderedSuggestions();
+    });
+
+    // Name and form of address may change after the suggestions were generated — keep the
+    // displayed sentences in sync so what is on screen is what gets saved.
+    document.getElementById('lastName').addEventListener('input', refreshRenderedSuggestions);
+    document.getElementById('addressStyle').addEventListener('change', refreshRenderedSuggestions);
+
+    function refreshRenderedSuggestions() {
+      document.querySelectorAll('#results .suggestion-text-and-button').forEach(row => {
+        const item = originalCommentData.find(d => d.comment.code === row.dataset.code);
+        if (item) renderSuggestionContent(row, item);
+      });
+    }
+
+    document.getElementById('overallGradeEnabled').addEventListener('change', updateGradeSummary);
+    document.getElementById('overallGrade').addEventListener('input', updateGradeSummary);
+    document.getElementById('varianceAcrossSubjects').addEventListener('change', function () {
+      updateGradeSummary();
+      // The toggle only reorders inside the current bands, so refresh what is already shown.
+      Object.keys(renderedCategories).forEach(refreshCategory);
     });
 
     document.getElementById('generateSuggestions').addEventListener('click', generateSuggestions);
@@ -1768,99 +2087,253 @@
     });
 
 
-    // Function to get user input for traits
+    // Returns only the dimensions the teacher explicitly rated. Unrated ones stay undefined
+    // so that downstream code can tell "no statement" apart from "average".
     function getUserTraitInputs() {
       const userTraits = {};
-      const traitsContainer = document.getElementById('traitsContainer');
-      const allSliderInputs = traitsContainer.querySelectorAll('input[type="range"]');
-
-      allSliderInputs.forEach(input => {
-        // input.id is already the sanitized trait name (e.g., "Freundlich_Hilfsbereit")
-        const traitName = input.id;
-        userTraits[traitName] = parseFloat(input.value) / 10; // Convert slider value to -1.0 to 1.0 range
+      document.querySelectorAll('#traitsContainer .trait-enable').forEach(enable => {
+        if (!enable.checked) return;
+        const trait = enable.dataset.trait;
+        const slider = document.getElementById(trait.replace(/[^a-zA-Z0-9]/g, '_'));
+        if (slider) userTraits[trait] = parseFloat(slider.value) / 10;
       });
       return userTraits;
     }
 
     /**
-     * Personalizes text by replacing gender/name placeholders.
+     * Resolves the ASV placeholders. Only bracketed placeholders are touched — the previous
+     * version also rewrote bare words (\bEr\b, \bsein\b, "Der Schüler") after substitution,
+     * which made the same template read "Herr Müller …" for a male and "Die Schülerin …" for
+     * a female student. One Zeugnis must use one form of address for everyone.
      * @param {string} originalText - The original ASV text with placeholders
      * @param {boolean} isMale - Whether the student is male
      * @param {string} lastName - The student's last name
+     * @param {string} style - 'name' (Herr/Frau + Nachname) or 'role' (Der Schüler/Die Schülerin)
      * @returns {string} The personalized text
      */
-    function personalizeText(originalText, isMale, lastName) {
-      const genderPronounSubject = isMale ? 'er' : 'sie';
-      const genderPronounPossessive = isMale ? 'sein' : 'ihr';
-      const genderSalutation = isMale ? 'Herr' : 'Frau';
+    function personalizeText(originalText, isMale, lastName, style) {
+      const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+      const subject = isMale ? 'er' : 'sie';
+      const possessive = isMale ? 'sein' : 'ihr';
+      const useName = style !== 'role';
+      const name = useName
+        ? `${isMale ? 'Herr' : 'Frau'} ${lastName || '[Nachname]'}`
+        : (isMale ? 'Der Schüler' : 'Die Schülerin');
+      const nameLower = useName ? name : (isMale ? 'der Schüler' : 'die Schülerin');
 
       return originalText
-        .replace(/\[Er\/Sie\]/g, genderPronounSubject.charAt(0).toUpperCase() + genderPronounSubject.slice(1))
-        .replace(/\[Seine\/Ihre\]/g, genderPronounPossessive.charAt(0).toUpperCase() + genderPronounPossessive.slice(1) + 'e')
-        .replace(/\[Sein\/Ihr\]/g, genderPronounPossessive.charAt(0).toUpperCase() + genderPronounPossessive.slice(1))
-        .replace(/\[seinen\/ihren\]/g, genderPronounPossessive + 'en')
+        .replace(/\[Der Schüler\/Die Schülerin\]/g, name)
+        .replace(/\[der Schüler\/die Schülerin\]/g, nameLower)
+        .replace(/\[Schüler\/Schülerin\]/g, name)
+        .replace(/\[txtVornameNachname\]/g, name)
+        .replace(/\[Er\/Sie\]/g, cap(subject))
+        .replace(/\[er\/sie\]/g, subject)
+        .replace(/\[ihn\/sie\]/g, isMale ? 'ihn' : 'sie')
+        .replace(/\[Ihm\/Ihr\]/g, isMale ? 'Ihm' : 'Ihr')
         .replace(/\[ihm\/ihr\]/g, isMale ? 'ihm' : 'ihr')
-        .replace(/\[Der Schüler\/Die Schülerin\]/g, isMale ? 'Der Schüler' : 'Die Schülerin')
-        .replace(/\[Schüler\/Schülerin\]/g, `${genderSalutation} ${lastName}`)
-        .replace(/Der Schüler/g, `${genderSalutation} ${lastName}`)
-        .replace(/der Schüler/g, `${genderSalutation} ${lastName}`)
-        .replace(/\bEr\b/g, genderPronounSubject.charAt(0).toUpperCase() + genderPronounSubject.slice(1))
-        .replace(/\ber\b/g, genderPronounSubject)
-        .replace(/\bIhm\b/g, isMale ? 'Ihm' : 'Ihr')
-        .replace(/\bihm\b/g, isMale ? 'ihm' : 'ihr')
-        .replace(/\[sein\/ihr\]/g, genderPronounPossessive)
-        .replace(/\[seine\/ihre\]/g, genderPronounPossessive + 'e')
-        .replace(/\bSeine\b/g, genderPronounPossessive.charAt(0).toUpperCase() + genderPronounPossessive.slice(1) + 'e')
-        .replace(/\bseine\b/g, genderPronounPossessive + 'e')
-        .replace(/\bSeiner\b/g, genderPronounPossessive.charAt(0).toUpperCase() + genderPronounPossessive.slice(1) + 'er')
-        .replace(/\bseiner\b/g, genderPronounPossessive + 'er')
-        .replace(/\bSein\b/g, genderPronounPossessive.charAt(0).toUpperCase() + genderPronounPossessive.slice(1))
-        .replace(/\bsein\b/g, genderPronounPossessive);
+        .replace(/\[Sein\/Ihr\]/g, cap(possessive))
+        .replace(/\[sein\/ihr\]/g, possessive)
+        .replace(/\[Seine\/Ihre\]/g, cap(possessive) + 'e')
+        .replace(/\[seine\/ihre\]/g, possessive + 'e')
+        .replace(/\[Seinen\/Ihren\]/g, cap(possessive) + 'en')
+        .replace(/\[seinen\/ihren\]/g, possessive + 'en')
+        .replace(/\[Seiner\/Ihrer\]/g, cap(possessive) + 'er')
+        .replace(/\[seiner\/ihrer\]/g, possessive + 'er');
+    }
+
+    /** True if a placeholder survived substitution — such a text must never reach a Zeugnis. */
+    function hasUnresolvedPlaceholder(text) {
+      return /\[[^\]]+\]/.test(text);
+    }
+
+    /** Current form-of-address settings, read fresh so a later name change is picked up. */
+    function currentAddress() {
+      return {
+        lastName: document.getElementById('lastName').value.trim(),
+        isMale: document.getElementById('genderMale').classList.contains('active'),
+        style: document.getElementById('addressStyle').value
+      };
+    }
+
+    /** Writes a value back onto a trait slider and refreshes everything that depends on it. */
+    function setTraitRating(trait, value) {
+      const traitId = trait.replace(/[^a-zA-Z0-9]/g, '_');
+      const slider = document.getElementById(traitId);
+      const enable = document.getElementById(`${traitId}Enabled`);
+      if (!slider || !enable) return;
+      enable.checked = true;
+      slider.value = Math.max(-10, Math.min(10, Math.round(value * 10)));
+      enable.onchange(); // redraws caption, colour and the Notenbild check
     }
 
     /**
-     * Handles clicking the +/- quality buttons to swap suggestion text.
-     * @param {HTMLElement} suggestionItemDiv - The suggestion item container
-     * @param {number} direction - +1 for better, -1 for worse
+     * Applies the teacher's verdict "the student is better/worse than this wording" to the
+     * estimate itself: the lead dimension moves to the neighbouring Notenstufe and the whole
+     * category is re-ranked. Swapping only the clicked row would leave the slider, the header
+     * and the sibling suggestions asserting the old Stufe.
+     * @param {string} category - A graded category
+     * @param {number} referenceBand - The band of the text the teacher judged
+     * @param {number} direction - +1 student is better, -1 student is worse
      */
-    function handleQualityButtonClick(suggestionItemDiv, direction) {
-      const currentCode = suggestionItemDiv.dataset.code;
-      const category = suggestionItemDiv.dataset.category;
-      const lastName = document.getElementById('lastName').value.trim();
-      const isMale = document.getElementById('genderMale').classList.contains('active');
-
-      // Find the current comment data
-      const currentData = originalCommentData.find(d => d.comment.code === currentCode);
-      if (!currentData) return;
-
-      // Collect all codes currently displayed in this category to exclude them
-      const categoryContainer = suggestionItemDiv.closest('.collapsible-content');
-      const allSuggestionsInCategory = categoryContainer.querySelectorAll('.suggestion-text-and-button');
-      const excludeCodes = Array.from(allSuggestionsInCategory).map(el => el.dataset.code);
-
-      // Find alternative text, excluding all currently displayed codes
-      const alternative = findAlternativeText(currentData.comment, category, direction, excludeCodes);
-
-      if (!alternative) {
-        displayMessage(direction > 0 ? 'Kein besserer Text verfügbar.' : 'Kein schlechterer Text verfügbar.', 'info');
+    function adjustCategoryEstimate(category, referenceBand, direction) {
+      const targetBand = nextBandWithTexts(category, referenceBand, direction);
+      if (targetBand === null) {
+        displayMessage(direction > 0
+          ? 'Notenstufe 1 ist bereits die beste Stufe.'
+          : 'Notenstufe 6 ist bereits die schlechteste Stufe.', 'info');
         return;
       }
 
-      // Update the suggestion item
-      const textSpan = suggestionItemDiv.querySelector('.suggestion-text');
-      const personalizedText = personalizeText(alternative.comment.text, isMale, lastName);
-      textSpan.textContent = personalizedText;
+      const lead = LEAD_DIMENSION[category];
+      const centroid = bandCentroids[category] && bandCentroids[category][targetBand];
+      if (centroid === undefined) return;
 
-      // Update data attributes
-      suggestionItemDiv.dataset.code = alternative.comment.code;
+      setTraitRating(lead, centroid);
+      refreshCategory(category);
+      displayMessage(`${TRAIT_META[lead].label}: Notenstufe ${targetBand}.`, 'info');
+    }
 
-      // Update save button onclick
-      const saveButton = suggestionItemDiv.querySelector('.save-btn');
-      if (saveButton) {
-        saveButton.onclick = function() {
-          saveAssessment(lastName, personalizedText, alternative.comment.code, alternative.category);
-        };
+    /**
+     * Handles the three row buttons.
+     * @param {HTMLElement} suggestionItemDiv - The suggestion item container
+     * @param {number} direction - +1 student is better than this text, -1 worse, 0 rephrase
+     */
+    function handleQualityButtonClick(suggestionItemDiv, direction) {
+      const currentData = originalCommentData.find(d => d.comment.code === suggestionItemDiv.dataset.code);
+      if (!currentData) return;
+
+      const band = parseInt(currentData.grade, 10);
+      if (direction !== 0 && LEAD_DIMENSION[currentData.category] && !isNaN(band)) {
+        adjustCategoryEstimate(currentData.category, band, direction);
+        return;
       }
+
+      // Exclude everything already on screen in this category, so nothing is shown twice.
+      const categoryContainer = suggestionItemDiv.closest('.collapsible-content');
+      const excludeCodes = Array.from(categoryContainer.querySelectorAll('.suggestion-text-and-button'))
+        .map(el => el.dataset.code);
+
+      const alternative = direction === 0
+        ? findVariantText(currentData, excludeCodes, getUserTraitInputs())
+        : findAlternativeText(currentData, direction, excludeCodes);
+
+      if (!alternative) {
+        displayMessage(
+          direction === 0 ? 'Keine weitere Formulierung auf dieser Stufe verfügbar.'
+            : direction > 0 ? 'Kein stärker formulierter Baustein verfügbar.'
+              : 'Kein zurückhaltenderer Baustein verfügbar.',
+          'info');
+        return;
+      }
+
+      renderSuggestionContent(suggestionItemDiv, alternative);
+    }
+
+    /**
+     * Writes one suggestion (text, ASV code, grade band) into an existing suggestion row.
+     * Called on first render and after every +/-/variant swap, so both paths stay in sync.
+     */
+    function renderSuggestionContent(suggestionItemDiv, item) {
+      const { lastName, isMale, style } = currentAddress();
+      const personalizedText = personalizeText(item.comment.text, isMale, lastName, style);
+
+      suggestionItemDiv.dataset.code = item.comment.code;
+      suggestionItemDiv.dataset.category = item.category;
+      suggestionItemDiv.dataset.grade = item.grade;
+
+      const textSpan = suggestionItemDiv.querySelector('.suggestion-text');
+      textSpan.textContent = personalizedText;
+      textSpan.classList.toggle('text-red-600', hasUnresolvedPlaceholder(personalizedText));
+
+      const badge = suggestionItemDiv.querySelector('.grade-badge');
+      if (badge) {
+        const band = parseInt(item.grade, 10);
+        badge.textContent = isNaN(band) ? item.comment.code : `Stufe ${band} · ${item.comment.code}`;
+      }
+    }
+
+    /**
+     * Ranks the catalogue against the current ratings. Pure apart from reading the ratings,
+     * so the same ranking serves the initial render and every later single-category refresh.
+     * @returns {Object} category -> array of up to MAX_SUGGESTIONS_PER_CATEGORY items
+     */
+    function rankSuggestions(userTraitInputs, allowAufforderung, preferVariance) {
+      const DISTANCE_THRESHOLD = 0.8;
+      const groupedSuggestions = {};
+      const categories = {};
+
+      originalCommentData.forEach(data => {
+        if (data.category === 'Aufforderung_und_Hinweise' && !allowAufforderung) return;
+        if (!categoryIsApplicable(data.category, userTraitInputs)) return;
+        (categories[data.category] ||= []).push({
+          ...data,
+          distance: calculateMaskedDistance(userTraitInputs, data.comment.weights)
+        });
+      });
+
+      for (const cat in categories) {
+        // In the graded Unterbereiche the catalogue's own band is authoritative: derive the
+        // band from the lead dimension and stay within one band of it. Ranking purely by
+        // distance let a Stufe-5 text sit next to a Stufe-4 one for the same input.
+        const target = impliedBand(cat, userTraitInputs);
+
+        const filtered = categories[cat].filter(item => {
+          if (!isFinite(item.distance) || item.distance > DISTANCE_THRESHOLD) return false;
+          if (hasValenceMismatch(userTraitInputs, item.comment.weights)) return false;
+          if (target !== null) {
+            const band = parseInt(item.grade, 10);
+            if (!isNaN(band) && Math.abs(band - target) > 1) return false;
+          }
+          return true;
+        });
+
+        filtered.sort((a, b) => {
+          if (target !== null) {
+            const da = Math.abs((parseInt(a.grade, 10) || target) - target);
+            const db = Math.abs((parseInt(b.grade, 10) || target) - target);
+            if (da !== db) return da - db;
+          }
+          // Variance is a modifier, never a level: it may only reorder inside a band, because
+          // every "schwankend" wording sits in the lower bands and would otherwise demote.
+          if (preferVariance) {
+            const va = VARIANCE_CODES.has(a.comment.code) ? 0 : 1;
+            const vb = VARIANCE_CODES.has(b.comment.code) ? 0 : 1;
+            if (va !== vb) return va - vb;
+          }
+          return a.distance - b.distance;
+        });
+
+        if (filtered.length > 0) {
+          groupedSuggestions[cat] = filtered.slice(0, MAX_SUGGESTIONS_PER_CATEGORY);
+        }
+      }
+      return groupedSuggestions;
+    }
+
+    /** Re-ranks and redraws one category after its estimate changed. */
+    function refreshCategory(category) {
+      const entry = renderedCategories[category];
+      if (!entry) return;
+
+      const userTraitInputs = getUserTraitInputs();
+      const grouped = rankSuggestions(userTraitInputs,
+        document.getElementById('allowAufforderung').checked,
+        document.getElementById('varianceAcrossSubjects').checked);
+      const band = impliedBand(category, userTraitInputs);
+
+      entry.headerTitle.textContent =
+        category.replace(/_/g, ' ') + (band !== null ? ` — Notenstufe ${band}` : '');
+
+      if (!grouped[category] || grouped[category].length === 0) {
+        entry.contentDiv.innerHTML = '';
+        const empty = document.createElement('p');
+        empty.className = 'text-sm text-gray-600';
+        empty.textContent = 'Für diese Einstufung gibt es keinen passenden Baustein.';
+        entry.contentDiv.appendChild(empty);
+        return;
+      }
+
+      renderCategoryRows(entry.contentDiv, category, grouped[category]);
     }
 
     /**
@@ -1872,148 +2345,143 @@
         return;
       }
 
-      const lastName = document.getElementById('lastName').value.trim();
-      const isMale = document.getElementById('genderMale').classList.contains('active');
-
+      const { lastName } = currentAddress();
       if (!lastName) {
         displayMessage("Bitte geben Sie den Nachnamen der Schülerin / des Schülers ein.", "error");
         return;
       }
 
       const userTraitInputs = getUserTraitInputs();
-      console.log('User Trait Inputs:', userTraitInputs);
+      const ratedTraits = Object.keys(userTraitInputs);
+      console.log('Bewertete Dimensionen:', userTraitInputs);
 
-      // Calculate masked Euclidean distance for all comments
-      const commentsWithDistance = originalCommentData.map(data => {
-        const distance = calculateMaskedDistance(userTraitInputs, data.comment.weights);
-        return {
-          ...data,
-          distance: distance
-        };
-      });
+      const allowAufforderung = document.getElementById('allowAufforderung').checked;
 
-      // Group suggestions by category FIRST, then pick top per category
-      const categories = {};
-      commentsWithDistance.forEach(item => {
-        if (!categories[item.category]) {
-          categories[item.category] = [];
-        }
-        categories[item.category].push(item);
-      });
-
-      const groupedSuggestions = {};
-      // Distance threshold: max normalized Euclidean distance (sqrt of avg squared diff)
-      // In a [-1,1] space, max possible distance per dimension is 2, so max normalized is 2
-      // We use 1.0 as threshold (roughly 50% of max range)
-      const DISTANCE_THRESHOLD = 1.0;
-
-      for (const cat in categories) {
-        // Sort comments within this category by distance (ascending)
-        categories[cat].sort((a, b) => a.distance - b.distance);
-
-        // Filter by distance and valence
-        const filtered = categories[cat].filter(item => {
-          if (item.distance > DISTANCE_THRESHOLD) return false;
-          if (hasValenceMismatch(userTraitInputs, item.comment.weights)) return false;
-          return true;
-        });
-
-        // Take the top MIN_SUGGESTIONS_PER_CATEGORY suggestions for this category
-        if (filtered.length > 0) {
-          groupedSuggestions[cat] = filtered.slice(0, MIN_SUGGESTIONS_PER_CATEGORY);
-        }
-      }
-
-      const resultsDiv = document.getElementById('results');
-      resultsDiv.innerHTML = ''; // Clear previous results
-
-      if (Object.keys(groupedSuggestions).length === 0) {
-        resultsDiv.innerHTML = '<p class="text-gray-600 text-center">Keine passenden Vorschläge gefunden.</p>';
+      if (ratedTraits.length === 0) {
+        displayMessage("Bitte mindestens eine Dimension bewerten.", "error");
         return;
       }
 
-      let categoryIndex = 0;
-      for (const category in groupedSuggestions) {
+      const preferVariance = document.getElementById('varianceAcrossSubjects').checked;
+      const groupedSuggestions = rankSuggestions(userTraitInputs, allowAufforderung, preferVariance);
+
+      const resultsDiv = document.getElementById('results');
+      resultsDiv.innerHTML = ''; // Clear previous results
+      renderedCategories = {};
+
+      if (Object.keys(groupedSuggestions).length === 0) {
+        resultsDiv.innerHTML = '<p class="text-gray-600 text-center">Keine passenden Vorschläge gefunden. Bitte die Regler anpassen.</p>';
+        return;
+      }
+
+      const hint = document.createElement('p');
+      hint.className = 'text-sm text-gray-600 mb-1';
+      hint.textContent = 'Wählen Sie höchstens einen Satz je Unterbereich. Eine Bemerkung von zwei bis drei Sätzen ist in der Regel ausreichend.';
+      resultsDiv.appendChild(hint);
+
+      const legend = document.createElement('p');
+      legend.className = 'text-xs text-gray-500 mb-2';
+      legend.textContent = '+ = die Schülerin oder der Schüler ist besser als dieser Text · '
+        + '− = schlechter als dieser Text · ⟳ = Einstufung passt, nur andere Formulierung. '
+        + 'In den Unterbereichen Mitarbeit und Verhalten korrigieren + und − die Einstufung selbst; '
+        + 'der zugehörige Regler bewegt sich mit.';
+      resultsDiv.appendChild(legend);
+
+      const orderedCategories = Object.keys(groupedSuggestions)
+        .sort((a, b) => CATEGORY_ORDER.indexOf(a) - CATEGORY_ORDER.indexOf(b));
+
+      for (const category of orderedCategories) {
         const categoryDiv = document.createElement('div');
         categoryDiv.className = 'result-box p-4 rounded-lg shadow-sm mb-4';
 
+        const target = impliedBand(category, userTraitInputs);
         const header = document.createElement('div');
         header.className = 'collapsible-header';
-        header.innerHTML = `
-                    <h3 class="text-lg font-semibold text-gray-800">${category.replace(/_/g, ' ')}</h3>
-                    <span class="collapsible-icon rotated">&#9658;</span> <!-- Right arrow -->
-                `;
+        const headerTitle = document.createElement('h3');
+        headerTitle.className = 'text-lg font-semibold text-gray-800';
+        headerTitle.textContent = category.replace(/_/g, ' ') + (target !== null ? ` — Notenstufe ${target}` : '');
+        const headerIcon = document.createElement('span');
+        headerIcon.className = 'collapsible-icon rotated';
+        headerIcon.innerHTML = '&#9658;';
+        header.appendChild(headerTitle);
+        header.appendChild(headerIcon);
         categoryDiv.appendChild(header);
 
         const contentDiv = document.createElement('div');
-        contentDiv.className = 'collapsible-content space-y-3 expanded'; // Add space-y for vertical spacing
-
-        groupedSuggestions[category].forEach(item => {
-          const personalizedText = personalizeText(item.comment.text, isMale, lastName);
-
-          const suggestionItemDiv = document.createElement('div');
-          suggestionItemDiv.className = 'suggestion-text-and-button';
-          suggestionItemDiv.dataset.code = item.comment.code;
-          suggestionItemDiv.dataset.category = item.category;
-
-          // Quality adjustment buttons (-/+)
-          const qualityButtonsDiv = document.createElement('div');
-          qualityButtonsDiv.className = 'quality-buttons';
-
-          const worseButton = document.createElement('button');
-          worseButton.className = 'quality-btn worse';
-          worseButton.textContent = '-';
-          worseButton.title = 'Schlechtere Bewertung';
-          worseButton.onclick = function() {
-            handleQualityButtonClick(suggestionItemDiv, -1);
-          };
-          qualityButtonsDiv.appendChild(worseButton);
-
-          const betterButton = document.createElement('button');
-          betterButton.className = 'quality-btn better';
-          betterButton.textContent = '+';
-          betterButton.title = 'Bessere Bewertung';
-          betterButton.onclick = function() {
-            handleQualityButtonClick(suggestionItemDiv, 1);
-          };
-          qualityButtonsDiv.appendChild(betterButton);
-
-          suggestionItemDiv.appendChild(qualityButtonsDiv);
-
-          const textSpan = document.createElement('span');
-          textSpan.className = 'suggestion-text text-gray-700';
-          textSpan.textContent = personalizedText;
-          suggestionItemDiv.appendChild(textSpan);
-
-          const actionsDiv = document.createElement('div');
-          actionsDiv.className = 'flex flex-col space-y-2'; // Stack buttons vertically
-
-          const saveButton = document.createElement('button');
-          saveButton.className = 'save-btn bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold py-1 px-2 rounded-md transition duration-150 ease-in-out shadow-sm';
-          saveButton.textContent = 'Speichern';
-          saveButton.onclick = function () {
-            const currentCode = suggestionItemDiv.dataset.code;
-            const currentText = textSpan.textContent;
-            saveAssessment(lastName, currentText, currentCode, item.category);
-          };
-          actionsDiv.appendChild(saveButton);
-
-          suggestionItemDiv.appendChild(actionsDiv);
-          contentDiv.appendChild(suggestionItemDiv);
-        });
+        contentDiv.className = 'collapsible-content space-y-3 expanded';
+        renderCategoryRows(contentDiv, category, groupedSuggestions[category]);
 
         categoryDiv.appendChild(contentDiv);
         resultsDiv.appendChild(categoryDiv);
+        renderedCategories[category] = { contentDiv, headerTitle };
 
-        // Add click listener for collapsible header
         header.addEventListener('click', function () {
           contentDiv.classList.toggle('expanded');
-          const icon = this.querySelector('.collapsible-icon');
-          icon.classList.toggle('rotated');
+          this.querySelector('.collapsible-icon').classList.toggle('rotated');
         });
-
-        categoryIndex++;
       }
+    }
+
+    /** Fills one category's collapsible body with suggestion rows, replacing what was there. */
+    function renderCategoryRows(contentDiv, category, list) {
+      contentDiv.innerHTML = '';
+      const graded = !!LEAD_DIMENSION[category];
+
+      list.forEach(item => {
+        const suggestionItemDiv = document.createElement('div');
+        suggestionItemDiv.className = 'suggestion-text-and-button';
+
+        const qualityButtonsDiv = document.createElement('div');
+        qualityButtonsDiv.className = 'quality-buttons';
+
+        const mkButton = (cls, text, title, dir) => {
+          const b = document.createElement('button');
+          b.className = `quality-btn ${cls}`;
+          b.textContent = text;
+          b.title = title;
+          b.setAttribute('aria-label', title);
+          b.onclick = () => handleQualityButtonClick(suggestionItemDiv, dir);
+          return b;
+        };
+        // The buttons state a verdict about the student, not about the sentence.
+        qualityButtonsDiv.appendChild(mkButton('worse', '−',
+          graded ? 'Schüler/in ist schlechter als dieser Text — eine Notenstufe herunter'
+            : 'Schüler/in ist schlechter als dieser Text — zurückhaltender formulieren', -1));
+        qualityButtonsDiv.appendChild(mkButton('better', '+',
+          graded ? 'Schüler/in ist besser als dieser Text — eine Notenstufe herauf'
+            : 'Schüler/in ist besser als dieser Text — stärker formulieren', 1));
+        qualityButtonsDiv.appendChild(mkButton('variant', '⟳',
+          'Einstufung passt, nur andere Formulierung', 0));
+        suggestionItemDiv.appendChild(qualityButtonsDiv);
+
+        const textWrap = document.createElement('div');
+        textWrap.className = 'suggestion-text-wrap flex-grow';
+        const badge = document.createElement('span');
+        badge.className = 'grade-badge block text-xs text-gray-500 mb-0.5';
+        const textSpan = document.createElement('span');
+        textSpan.className = 'suggestion-text text-gray-700 block';
+        textWrap.appendChild(badge);
+        textWrap.appendChild(textSpan);
+        suggestionItemDiv.appendChild(textWrap);
+
+        const actionsDiv = document.createElement('div');
+        actionsDiv.className = 'flex flex-col space-y-2';
+
+        const saveButton = document.createElement('button');
+        saveButton.className = 'save-btn bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold py-1 px-2 rounded-md transition duration-150 ease-in-out shadow-sm';
+        saveButton.textContent = 'Übernehmen';
+        saveButton.onclick = function () {
+          // Read the row's current state so a swapped text is saved, not the initial one.
+          saveAssessment(currentAddress().lastName, textSpan.textContent,
+            suggestionItemDiv.dataset.code, suggestionItemDiv.dataset.category);
+        };
+        actionsDiv.appendChild(saveButton);
+
+        suggestionItemDiv.appendChild(actionsDiv);
+        contentDiv.appendChild(suggestionItemDiv);
+
+        renderSuggestionContent(suggestionItemDiv, item);
+      });
     }
 
     function getSavedAssessments() {
@@ -2022,32 +2490,41 @@
     }
 
     function saveAssessment(lastName, text, originalCode, category) {
+      if (!lastName) {
+        displayMessage('Bitte zuerst den Nachnamen eintragen.', 'error');
+        return;
+      }
       const assessments = getSavedAssessments();
       if (!assessments[lastName]) {
         assessments[lastName] = [];
       }
       const newItem = { text: text, originalCode: originalCode, category: category, date: new Date().toISOString() };
-      if (!assessments[lastName].some(item => item.originalCode === originalCode)) { // Check against originalCode to avoid duplicates of same base text
-        assessments[lastName].push(newItem);
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(assessments));
-      } else {
-        // Allow saving if text is different, even if original code is same (e.g. adapted differently) - actually, no, stick to original code for simplicity
-        const existingItemIndex = assessments[lastName].findIndex(item => item.originalCode === originalCode);
-        if (existingItemIndex !== -1 && assessments[lastName][existingItemIndex].text !== text) {
-          // If the text itself is different (e.g. due to different name/gender adaptation) but from same original code
-          // This case should ideally not happen if originalCode is the unique key for a "base phrase"
-          // For now, we prevent re-saving if the originalCode matches.
-          // If a user wants to save a *variation* it.should perhaps be treated differently.
-          // However, current logic: if originalCode is there, don't add.
-          displayMessage('Ein Text mit diesem Ursprungscode ist bereits für diese Schülerin / diesen Schüler gespeichert.', 'info');
-        } else if (existingItemIndex === -1) {
-          // This case should not be reached due to outer if, but for safety:
-          assessments[lastName].push(newItem);
-          localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(assessments));
-        } else {
-          displayMessage('Dieser Text (basierend auf Ursprungscode) ist bereits gespeichert.', 'info');
-        }
+
+      if (assessments[lastName].some(item => item.originalCode === originalCode)) {
+        displayMessage('Dieser Baustein ist bereits übernommen.', 'info');
+        return;
       }
+
+      // Mitarbeit and Verhalten are graded Unterbereiche: two texts from the same one would
+      // put two different grade statements into one Bemerkung. Replace instead of appending.
+      const existingInBand = LEAD_DIMENSION[category]
+        ? assessments[lastName].findIndex(item => item.category === category)
+        : -1;
+      if (existingInBand !== -1) {
+        assessments[lastName][existingInBand] = newItem;
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(assessments));
+        displayMessage(`Bisherigen Satz zu „${category.replace(/_/g, ' ')}“ ersetzt.`, 'info');
+        return;
+      }
+
+      assessments[lastName].push(newItem);
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(assessments));
+      displayMessage('Baustein übernommen.', 'success');
+    }
+
+    /** Sorts saved texts into the order of the ASV catalogue (a201 < a211 < a230 < a250 …). */
+    function sortByAsvOrder(texts) {
+      return texts.slice().sort((a, b) => a.originalCode.localeCompare(b.originalCode, 'de', { numeric: true }));
     }
 
     function removeAssessment(lastName, originalCodeToRemove) {
@@ -2093,14 +2570,9 @@
       const tbody = table.querySelector('tbody');
 
       sortedLastNames.forEach(lastName => {
-        const studentTexts = assessments[lastName]; // Array of {text, originalCode, category}
-
-        // Sort by category then by originalCode for consistent ordering
-        studentTexts.sort((a, b) => {
-          if (a.category < b.category) return -1;
-          if (a.category > b.category) return 1;
-          return a.originalCode.localeCompare(b.originalCode);
-        });
+        // Catalogue order, not alphabetical category order — the latter put the Aufforderung
+        // ("Mehr häuslicher Fleiß …") at the front of the Bemerkung.
+        const studentTexts = sortByAsvOrder(assessments[lastName]);
 
         const combinedTextContent = studentTexts.map(item => item.text).join(' ');
 
@@ -2113,11 +2585,25 @@
 
         const cellCombined = row.insertCell();
         cellCombined.className = 'py-3 px-6 text-left';
-        cellCombined.innerHTML = `
-                    <div class="flex flex-col">
-                        <span class="combined-text-display mb-1">${combinedTextContent}</span>
-                        <button class="copy-combined-text-button bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold py-1 px-2 rounded-lg self-start transition duration-200 ease-in-out" data-text-to-copy="${combinedTextContent}">Kopieren</button>
-                    </div>`;
+        // Built with textContent, not innerHTML: a name like O'Brien or Groß<> must not be
+        // able to break out of the markup.
+        const combinedWrap = document.createElement('div');
+        combinedWrap.className = 'flex flex-col';
+        const combinedSpan = document.createElement('span');
+        combinedSpan.className = 'combined-text-display mb-1';
+        combinedSpan.textContent = combinedTextContent;
+        const combinedMeta = document.createElement('span');
+        combinedMeta.className = 'text-xs text-gray-500 mb-1';
+        combinedMeta.textContent = `${studentTexts.length} Sätze, ${combinedTextContent.length} Zeichen`
+          + (studentTexts.length > 3 ? ' — für eine Zeugnisbemerkung recht lang.' : '');
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'copy-combined-text-button bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold py-1 px-2 rounded-lg self-start transition duration-200 ease-in-out';
+        copyBtn.textContent = 'Kopieren';
+        copyBtn.dataset.textToCopy = combinedTextContent;
+        combinedWrap.appendChild(combinedSpan);
+        combinedWrap.appendChild(combinedMeta);
+        combinedWrap.appendChild(copyBtn);
+        cellCombined.appendChild(combinedWrap);
 
         const cellIndividual = row.insertCell();
         cellIndividual.className = 'py-3 px-6 text-left';
