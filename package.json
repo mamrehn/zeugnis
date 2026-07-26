@@ -1,0 +1,13 @@
+{
+  "name": "zeugnis",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Helfer für Zeugnisbemerkungen (ASV-Textbausteine, Bereich 2)",
+  "scripts": {
+    "test": "node --test 'test/*.test.js'",
+    "test:logic": "node --test 'test/catalogue.test.js' 'test/scale.test.js' 'test/suggestions.test.js' 'test/hausstil.test.js'"
+  },
+  "devDependencies": {
+    "playwright": "^1.62.0"
+  }
+}
