@@ -158,7 +158,7 @@ test('Export schreibt die Sätze in die richtigen Zeilen und Spalten', options, 
     await page.locator('.student-chip').nth(2).click();
     await page.fill('#Mitarbeit', '95');
     await page.locator('#Mitarbeit').dispatchEvent('input');
-    await page.fill('#lateArrivals', '10');
+    await page.selectOption('#punctuality', 'pu2');
     await page.click('#generateSuggestions');
     const third = await acceptFirstSuggestions(page, 3);
 

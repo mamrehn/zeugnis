@@ -723,10 +723,9 @@
       <h3 class="text-sm font-semibold text-gray-700 mb-2">Weitere Angaben</h3>
 
       <label class="flex items-center gap-2 text-sm text-gray-700 mb-2">
-        <span class="w-40">Verspätungen:</span>
-        <input type="number" id="lateArrivals" min="0" step="1" value="0"
-          class="border rounded-md py-1 px-2 text-sm text-gray-700 w-10 text-right">
-        <span id="lateArrivalsHint" class="text-xs text-gray-500"></span>
+        <span class="w-40">Pünktlichkeit:</span>
+        <select id="punctuality"
+          class="border rounded-md py-1 px-2 text-sm text-gray-700 bg-white flex-grow"></select>
       </label>
 
       <label class="flex items-center gap-2 text-sm text-gray-700 mb-2">
@@ -817,6 +816,23 @@
       "Mitarbeit", "Verhalten", "Zusatzaemter", "Puenktlichkeit", "Aufforderung_und_Hinweise",
       "Fachliche_und_kognitive_Kompetenz", "Soziale_Kompetenz", "Lernverhalten_Lernkompetenz"
     ];
+
+    // Anzeigenamen: die Schlüssel sind ohne Umlaute geschrieben, auf dem Bildschirm hat das
+    // nichts zu suchen.
+    const CATEGORY_LABELS = {
+      Mitarbeit: 'Mitarbeit',
+      Verhalten: 'Verhalten',
+      Zusatzaemter: 'Zusatzämter',
+      Puenktlichkeit: 'Pünktlichkeit',
+      Aufforderung_und_Hinweise: 'Aufforderung und Hinweise',
+      Fachliche_und_kognitive_Kompetenz: 'Fachliche und kognitive Kompetenz',
+      Soziale_Kompetenz: 'Soziale Kompetenz',
+      Lernverhalten_Lernkompetenz: 'Lernverhalten und Lernkompetenz'
+    };
+
+    function categoryLabel(category) {
+      return CATEGORY_LABELS[category] || category.replace(/_/g, ' ');
+    }
 
     // Which rated dimension licenses a category, and in which direction.
     // Measured over the catalogue: 2.50/2.60/2.70 contain only positively weighted Bausteine
@@ -999,10 +1015,20 @@
       { min: 5, code: 'pu1', text: 'Die Pünktlichkeit ließ zu wünschen übrig.' }
     ];
 
-    /** @returns {Object|null} The phrase earned by a number of late arrivals. */
-    function punctualityPhrase(lateArrivals) {
-      if (!Number.isFinite(lateArrivals) || lateArrivals < 0) return null;
-      return PUNCTUALITY_PHRASES.find(p => lateArrivals >= p.min) || null;
+    /**
+     * Beschriftung für die Auswahlliste. Die Schwelle steht im Eintrag selbst, damit die
+     * Entscheidung dort fällt, wo sie hingehört — ohne dass jemand Verspätungen abtippt,
+     * die längst im Klassenbuch stehen.
+     */
+    function punctualityLabel(phrase) {
+      return `ab ${phrase.min} Verspätungen: ${phrase.text}`;
+    }
+
+    /** @returns {Object|null} Der ausgewählte Satz zur Pünktlichkeit. */
+    function selectedPunctuality() {
+      const select = document.getElementById('punctuality');
+      if (!select || !select.value) return null;
+      return PUNCTUALITY_PHRASES.find(p => p.code === select.value) || null;
     }
 
     // Bausteine, die ausdrücklich schwankende statt gleichbleibender Leistung beschreiben.
@@ -2266,6 +2292,7 @@
 
       computeBandCentroids();
       initializeOfficeInput();
+      initializePunctualityInput();
       updateGradeSummary();
 
       console.log(`${originalCommentData.length} Kommentare geladen und bereit.`);
@@ -2294,11 +2321,20 @@
       container.appendChild(p);
     }
 
-    /** @returns {number} Recorded late arrivals, 0 if unset. */
-    function getLateArrivals() {
-      const el = document.getElementById('lateArrivals');
-      const n = el ? parseInt(el.value, 10) : 0;
-      return Number.isFinite(n) && n > 0 ? n : 0;
+    function initializePunctualityInput() {
+      const select = document.getElementById('punctuality');
+      select.innerHTML = '';
+      const none = document.createElement('option');
+      none.value = '';
+      none.textContent = 'keine Bemerkung zur Pünktlichkeit';
+      select.appendChild(none);
+      // Aufsteigend nach Schwelle, damit die Liste der Eskalation folgt.
+      PUNCTUALITY_PHRASES.slice().sort((a, b) => a.min - b.min).forEach(phrase => {
+        const option = document.createElement('option');
+        option.value = phrase.code;
+        option.textContent = punctualityLabel(phrase);
+        select.appendChild(option);
+      });
     }
 
     function initializeOfficeInput() {
@@ -2315,17 +2351,10 @@
     /** Redraws the hint area under the extra inputs. */
     function updateGradeSummary() {
       const hintsEl = document.getElementById('gradeHints');
-      const lateHint = document.getElementById('lateArrivalsHint');
-      if (!hintsEl || !lateHint) return;
+      if (!hintsEl) return;
       hintsEl.innerHTML = '';
 
       document.getElementById('officeNote').textContent = selectedOffice().note || '';
-
-      const phrase = punctualityPhrase(getLateArrivals());
-      const { lastName, isMale, style } = currentAddress();
-      lateHint.textContent = phrase
-        ? `ab ${phrase.min}: „${personalizeText(phrase.text, isMale, lastName, style)}“`
-        : 'ab 5 bzw. ab 10 Verspätungen wird ein Satz zur Pünktlichkeit ergänzt';
 
       if (document.getElementById('varianceAcrossSubjects').checked) {
         renderHint(hintsEl, 'info',
@@ -2840,7 +2869,7 @@
       });
     }
 
-    document.getElementById('lateArrivals').addEventListener('input', updateGradeSummary);
+    document.getElementById('punctuality').addEventListener('change', updateGradeSummary);
     document.getElementById('office').addEventListener('change', updateGradeSummary);
 
     document.getElementById('copyBemerkung').addEventListener('click', function () {
@@ -3164,7 +3193,7 @@
       const band = impliedBand(category, userTraitInputs, userBands);
 
       entry.headerTitle.textContent =
-        category.replace(/_/g, ' ') + (band !== null ? ` — Notenstufe ${band}` : '');
+        categoryLabel(category) + (band !== null ? ` — Notenstufe ${band}` : '');
 
       if (!grouped[category] || grouped[category].length === 0) {
         entry.contentDiv.innerHTML = '';
@@ -3219,8 +3248,8 @@
         }));
       }
 
-      // Schulinterner Zusatz, rein aus der Zahl der Verspätungen abgeleitet.
-      const phrase = punctualityPhrase(getLateArrivals());
+      // Schulinterner Zusatz, ausdrücklich gewählt statt aus einer Zahl abgeleitet.
+      const phrase = selectedPunctuality();
       if (phrase) {
         groupedSuggestions['Puenktlichkeit'] = [{
           category: 'Puenktlichkeit', grade: 'other', distance: 0,
@@ -3262,7 +3291,7 @@
         header.className = 'collapsible-header';
         const headerTitle = document.createElement('h3');
         headerTitle.className = 'text-lg font-semibold text-gray-800';
-        headerTitle.textContent = category.replace(/_/g, ' ') + (target !== null ? ` — Notenstufe ${target}` : '');
+        headerTitle.textContent = categoryLabel(category) + (target !== null ? ` — Notenstufe ${target}` : '');
         const headerIcon = document.createElement('span');
         headerIcon.className = 'collapsible-icon rotated';
         headerIcon.innerHTML = '&#9658;';
@@ -3488,7 +3517,7 @@
       if (existingInBand !== -1) {
         assessments[lastName][existingInBand] = newItem;
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(assessments));
-        displayMessage(`Bisherigen Satz zu „${category.replace(/_/g, ' ')}“ ersetzt.`, 'info');
+        displayMessage(`Bisherigen Satz zu „${categoryLabel(category)}“ ersetzt.`, 'info');
         return;
       }
 
@@ -3592,7 +3621,7 @@
 
           const categorySpan = document.createElement('span');
           categorySpan.className = 'category-label text-xs'; // Re-use category label style
-          categorySpan.textContent = item.category;
+          categorySpan.textContent = categoryLabel(item.category);
           textItemSpan.appendChild(categorySpan);
 
 
@@ -3647,7 +3676,7 @@
       return {
         traits: traitState,
         office: document.getElementById('office').value,
-        late: getLateArrivals(),
+        punctuality: document.getElementById('punctuality').value,
         variance: document.getElementById('varianceAcrossSubjects').checked,
         aufforderung: document.getElementById('allowAufforderung').checked,
         chosen: currentStudent >= 0 && students[currentStudent].state
@@ -3666,7 +3695,7 @@
         enable.onchange();
       });
       document.getElementById('office').value = state && state.office ? state.office : 'none';
-      document.getElementById('lateArrivals').value = state ? state.late : 0;
+      document.getElementById('punctuality').value = state && state.punctuality ? state.punctuality : '';
       document.getElementById('varianceAcrossSubjects').checked = state ? state.variance : false;
       document.getElementById('allowAufforderung').checked = state ? state.aufforderung : false;
       updateGradeSummary();
@@ -3675,7 +3704,7 @@
     function freshState() {
       const traits = {};
       sortedTraitNames.forEach(trait => { traits[trait] = { enabled: true, points: DEFAULT_POINTS }; });
-      return { traits, office: 'none', late: 0, variance: false, aufforderung: false, chosen: {} };
+      return { traits, office: 'none', punctuality: '', variance: false, aufforderung: false, chosen: {} };
     }
 
     /** Sätze eines Schülers in Katalogreihenfolge. */

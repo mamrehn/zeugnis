@@ -9,7 +9,7 @@ function app() {
   const a = loadApp({
     expose: ['IHK_BANDS', 'DEFAULT_POINTS', 'POINT_STEP', 'ihkBand', 'bandMidPoints',
       'pointsToWeight', 'impliedBand', 'computeBandCentroids', 'nextBandWithTexts',
-      'punctualityPhrase', 'PUNCTUALITY_PHRASES', 'rankSuggestions', 'LEAD_DIMENSION']
+      'punctualityLabel', 'PUNCTUALITY_PHRASES', 'rankSuggestions', 'LEAD_DIMENSION']
   });
   a.__setCatalogue(items, traits);
   a.computeBandCentroids();
@@ -105,22 +105,24 @@ test('+/- läuft die Notenstufen ohne Richtungsfehler entlang', () => {
   }
 });
 
-test('Pünktlichkeitssätze hängen an den beschlossenen Schwellen', () => {
+test('Pünktlichkeitssätze tragen ihre Schwelle in der Beschriftung', () => {
   const a = app();
-  assert.strictEqual(a.punctualityPhrase(0), null);
-  assert.strictEqual(a.punctualityPhrase(4), null);
-  assert.strictEqual(a.punctualityPhrase(5).text, 'Die Pünktlichkeit ließ zu wünschen übrig.');
-  assert.strictEqual(a.punctualityPhrase(9).text, 'Die Pünktlichkeit ließ zu wünschen übrig.');
-  assert.strictEqual(a.punctualityPhrase(10).text, 'Die Pünktlichkeit ließ stark zu wünschen übrig.');
-  assert.strictEqual(a.punctualityPhrase(42).text, 'Die Pünktlichkeit ließ stark zu wünschen übrig.');
-  assert.strictEqual(a.punctualityPhrase(-1), null);
-  assert.strictEqual(a.punctualityPhrase(NaN), null);
-
-  // Eskalation: der zweite Satz muss die Steigerung des ersten sein, nicht irgendein Text.
   const [harsh, mild] = a.PUNCTUALITY_PHRASES;
-  assert.ok(harsh.min > mild.min, 'Der schärfere Satz braucht die höhere Schwelle');
-  assert.ok(harsh.text.length > mild.text.length && harsh.text.includes('stark'),
-    'Die zweite Stufe muss die Steigerung der ersten sein');
+
+  assert.strictEqual(mild.min, 5);
+  assert.strictEqual(harsh.min, 10);
+  assert.strictEqual(mild.text, 'Die Pünktlichkeit ließ zu wünschen übrig.');
+  assert.strictEqual(harsh.text, 'Die Pünktlichkeit ließ stark zu wünschen übrig.');
+
+  // Die Schwelle steht im Eintrag, damit niemand Verspätungen abtippen muss.
+  assert.strictEqual(a.punctualityLabel(mild),
+    'ab 5 Verspätungen: Die Pünktlichkeit ließ zu wünschen übrig.');
+  assert.strictEqual(a.punctualityLabel(harsh),
+    'ab 10 Verspätungen: Die Pünktlichkeit ließ stark zu wünschen übrig.');
+
+  // Eskalation: der schärfere Satz gehört an die höhere Schwelle.
+  assert.ok(harsh.min > mild.min);
+  assert.ok(harsh.text.includes('stark') && !mild.text.includes('stark'));
 });
 
 test('Pünktlichkeitssätze brauchen keine Anrede', () => {

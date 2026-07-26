@@ -83,6 +83,27 @@ test('Die Punkteleiste ist genau so breit wie der Regler', options, async () => 
   }
 });
 
+test('Überschriften der Gruppen sind lesbar geschrieben', options, async () => {
+  const { browser, page } = await openApp();
+  try {
+    await page.fill('#lastName', 'Müller');
+    await page.selectOption('#punctuality', 'pu1');
+    await page.selectOption('#office', 'ks1');
+    await page.click('#generateSuggestions');
+    await page.waitForSelector('#results .suggestion-text-and-button');
+
+    const heads = (await page.locator('#results .result-box h3').allTextContents())
+      .map(h => h.trim());
+    assert.ok(heads.some(h => h === 'Pünktlichkeit'), `Pünktlichkeit fehlt: ${heads}`);
+    assert.ok(heads.some(h => h === 'Zusatzämter'), `Zusatzämter fehlt: ${heads}`);
+    for (const head of heads) {
+      assert.ok(!/ae|oe|ue/.test(head), `Umschrift in der Überschrift: ${head}`);
+    }
+  } finally {
+    await browser.close();
+  }
+});
+
 test('Regler starten vorbelegt an der Grenze 3/4', options, async () => {
   const { browser, page } = await openApp();
   try {
@@ -138,19 +159,26 @@ test('"+" korrigiert die Einstufung und zieht den Regler mit', options, async ()
   }
 });
 
-test('Verspätungen ergänzen den Pünktlichkeitssatz in der Eskalation', options, async () => {
+test('Die Pünktlichkeitsauswahl nennt die Schwelle und ergänzt den Satz', options, async () => {
   const { browser, page } = await openApp();
   try {
     await page.fill('#lastName', 'Müller');
 
-    await page.fill('#lateArrivals', '5');
+    const options_ = await page.locator('#punctuality option').allTextContents();
+    assert.deepStrictEqual(options_, [
+      'keine Bemerkung zur Pünktlichkeit',
+      'ab 5 Verspätungen: Die Pünktlichkeit ließ zu wünschen übrig.',
+      'ab 10 Verspätungen: Die Pünktlichkeit ließ stark zu wünschen übrig.'
+    ]);
+
+    await page.selectOption('#punctuality', 'pu1');
     await page.click('#generateSuggestions');
     await page.waitForSelector('#results .suggestion-text-and-button');
     let texts = await page.locator('#results .suggestion-text').allTextContents();
     assert.ok(texts.some(t => t === 'Die Pünktlichkeit ließ zu wünschen übrig.'),
       `Erste Eskalationsstufe fehlt: ${texts.join(' | ')}`);
 
-    await page.fill('#lateArrivals', '10');
+    await page.selectOption('#punctuality', 'pu2');
     await page.click('#generateSuggestions');
     await page.waitForSelector('#results .suggestion-text-and-button');
     texts = await page.locator('#results .suggestion-text').allTextContents();
