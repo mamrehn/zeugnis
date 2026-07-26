@@ -685,6 +685,7 @@
           speichern</button>
       </div>
       <div id="studentList" class="student-list mb-2"></div>
+      <p id="classFacts" class="text-xs text-gray-600 mb-1"></p>
       <p class="text-xs text-gray-500 mb-1">Bemerkung für die aktuelle Person:</p>
       <p id="classPreview" class="text-sm text-gray-700"></p>
     </div>
@@ -2869,8 +2870,20 @@
       });
     }
 
-    document.getElementById('punctuality').addEventListener('change', updateGradeSummary);
-    document.getElementById('office').addEventListener('change', updateGradeSummary);
+    /**
+     * Eine Änderung an den Tatsachenfeldern zieht alles nach, was sie betrifft: Hinweise,
+     * Trefferliste, Markierung und die Zusammenfassung in der Klassenleiste.
+     */
+    function factsChanged() {
+      updateGradeSummary();
+      syncPunctualityChoice();
+      if (document.querySelector('#results .suggestion-text-and-button')) generateSuggestions();
+      renderClassPanel();
+      markActiveChoices();
+    }
+
+    ['punctuality', 'office', 'varianceAcrossSubjects', 'allowAufforderung']
+      .forEach(id => document.getElementById(id).addEventListener('change', factsChanged));
 
     document.getElementById('copyBemerkung').addEventListener('click', function () {
       const text = document.getElementById('bemerkungText').textContent;
@@ -3408,10 +3421,47 @@
       return map;
     }
 
+    /**
+     * Die Auswahlliste zur Pünktlichkeit ist bereits die Entscheidung — der Satz wandert
+     * deshalb sofort in die Bemerkung, statt einen weiteren Klick zu verlangen.
+     */
+    function syncPunctualityChoice() {
+      const phrase = selectedPunctuality();
+      const chosen = currentChosen();
+      const write = entry => {
+        if (classFile && currentStudent >= 0) {
+          if (entry) students[currentStudent].state.chosen.Puenktlichkeit = entry;
+          else delete students[currentStudent].state.chosen.Puenktlichkeit;
+          renderClassPanel();
+        } else {
+          const { lastName } = currentAddress();
+          if (!lastName) return;
+          const assessments = getSavedAssessments();
+          const list = (assessments[lastName] || []).filter(item => item.category !== 'Puenktlichkeit');
+          if (entry) list.push({ text: entry.text, originalCode: entry.code, category: 'Puenktlichkeit', date: new Date().toISOString() });
+          if (list.length) assessments[lastName] = list; else delete assessments[lastName];
+          localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(assessments));
+        }
+      };
+
+      if (phrase) {
+        if (!chosen.Puenktlichkeit || chosen.Puenktlichkeit.code !== phrase.code) {
+          write({ code: phrase.code, text: phrase.text });
+        }
+      } else if (chosen.Puenktlichkeit) {
+        write(null);
+      }
+    }
+
     /** Nimmt einen Satz an oder wieder zurück; je Unterbereich bleibt höchstens einer. */
     function toggleChoice(category, code, text) {
       const chosen = currentChosen();
       const active = chosen[category] && chosen[category].code === code;
+
+      if (category === 'Puenktlichkeit' && active) {
+        // Sonst behauptete die Auswahlliste weiter einen Satz, den es nicht mehr gibt.
+        document.getElementById('punctuality').value = '';
+      }
 
       if (classFile && currentStudent >= 0) {
         const student = students[currentStudent];
@@ -3763,6 +3813,20 @@
       });
 
       const student = students[currentStudent];
+
+      // Die Tatsachenfelder sichtbar machen: sie stehen weiter oben und geraten sonst
+      // beim Durchblättern aus dem Blick.
+      const facts = [];
+      const office = selectedOffice();
+      if (office.codes.length) facts.push(office.label);
+      const phrase = selectedPunctuality();
+      if (phrase) facts.push(`Pünktlichkeit ab ${phrase.min} Verspätungen`);
+      if (document.getElementById('varianceAcrossSubjects').checked) facts.push('Leistungen streuten stark');
+      if (document.getElementById('allowAufforderung').checked) facts.push('Aufforderung erlaubt');
+      const factsEl = document.getElementById('classFacts');
+      factsEl.textContent = facts.length ? facts.join(' · ') : 'keine Zusatzangaben';
+      factsEl.style.display = student ? 'block' : 'none';
+
       const preview = document.getElementById('classPreview');
       preview.textContent = student
         ? (sentencesOf(student).map(s => s.text).join(' ') || 'Noch kein Satz übernommen.')

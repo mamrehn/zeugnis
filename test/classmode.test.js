@@ -158,9 +158,15 @@ test('Export schreibt die Sätze in die richtigen Zeilen und Spalten', options, 
     await page.locator('.student-chip').nth(2).click();
     await page.fill('#Mitarbeit', '95');
     await page.locator('#Mitarbeit').dispatchEvent('input');
-    await page.selectOption('#punctuality', 'pu2');
     await page.click('#generateSuggestions');
-    const third = await acceptFirstSuggestions(page, 3);
+    const third = await acceptFirstSuggestions(page, 2);
+
+    // Die Auswahlliste ist bereits die Entscheidung: der Satz steht ohne weiteren Klick drin.
+    await page.selectOption('#punctuality', 'pu2');
+    assert.match(await page.textContent('#classPreview'), /Die Pünktlichkeit ließ stark zu wünschen übrig\./,
+      'Der gewählte Pünktlichkeitssatz muss sofort in der Bemerkung stehen');
+    assert.match(await page.textContent('#classFacts'), /Pünktlichkeit ab 10 Verspätungen/,
+      'Die Klassenleiste muss die Zusatzangabe zeigen');
 
     const download = await Promise.all([
       page.waitForEvent('download'),

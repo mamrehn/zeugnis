@@ -171,19 +171,24 @@ test('Die Pünktlichkeitsauswahl nennt die Schwelle und ergänzt den Satz', opti
       'ab 10 Verspätungen: Die Pünktlichkeit ließ stark zu wünschen übrig.'
     ]);
 
-    await page.selectOption('#punctuality', 'pu1');
     await page.click('#generateSuggestions');
     await page.waitForSelector('#results .suggestion-text-and-button');
-    let texts = await page.locator('#results .suggestion-text').allTextContents();
-    assert.ok(texts.some(t => t === 'Die Pünktlichkeit ließ zu wünschen übrig.'),
-      `Erste Eskalationsstufe fehlt: ${texts.join(' | ')}`);
+
+    // Auswählen genügt: der Satz steht sofort in der Bemerkung, ohne „Übernehmen“.
+    await page.selectOption('#punctuality', 'pu1');
+    assert.match(await page.textContent('#bemerkungText'), /Die Pünktlichkeit ließ zu wünschen übrig\./,
+      'Erste Eskalationsstufe fehlt');
 
     await page.selectOption('#punctuality', 'pu2');
-    await page.click('#generateSuggestions');
-    await page.waitForSelector('#results .suggestion-text-and-button');
-    texts = await page.locator('#results .suggestion-text').allTextContents();
-    assert.ok(texts.some(t => t === 'Die Pünktlichkeit ließ stark zu wünschen übrig.'),
-      `Zweite Eskalationsstufe fehlt: ${texts.join(' | ')}`);
+    const text = await page.textContent('#bemerkungText');
+    assert.match(text, /Die Pünktlichkeit ließ stark zu wünschen übrig\./, 'Zweite Eskalationsstufe fehlt');
+    assert.ok(!/ließ zu wünschen übrig\.\s*Die Pünktlichkeit/.test(text),
+      'Es darf immer nur ein Satz zur Pünktlichkeit enthalten sein');
+
+    // Zurück auf „keine Bemerkung“ nimmt ihn wieder heraus.
+    await page.selectOption('#punctuality', '');
+    assert.ok(!/Pünktlichkeit/.test(await page.textContent('#bemerkungText')),
+      'Abwählen muss den Satz entfernen');
   } finally {
     await browser.close();
   }
